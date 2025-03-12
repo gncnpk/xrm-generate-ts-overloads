@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Overload Signatures
-// @namespace    https://github.com/gncnpk
-// @author       Gavin Canon-Phratsachack
+// @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
+// @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
 // @version      1.0
 // @license      GPL3
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
