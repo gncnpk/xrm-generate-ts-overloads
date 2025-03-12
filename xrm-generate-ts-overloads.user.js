@@ -37,7 +37,7 @@
             "integer": "Xrm.Attributes.NumberAttribute",
             "lookup": "Xrm.Attributes.LookupAttribute",
             "memo": "Xrm.Attributes.StringAttribute",
-            "money": "Xrm.Attributes.MoneyAttribute",
+            "money": "Xrm.Attributes.NumberAttribute",
             "multiselectoptionset": "Xrm.Attributes.MultiselectOptionSetAttribute",
             "optionset": "Xrm.Attributes.OptionSetAttribute",
             "string": "Xrm.Attributes.StringAttribute"
