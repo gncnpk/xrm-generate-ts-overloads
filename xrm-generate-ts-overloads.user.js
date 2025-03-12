@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Overload Signatures
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.2
+// @version      1.3
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -50,7 +50,8 @@
             "optionset": "Xrm.Controls.OptionSetControl",
             "customsubgrid:MscrmControls.Grid.GridControl": "Xrm.Controls.GridControl",
             "subgrid": "Xrm.Controls.GridControl",
-            "timelinewall": "Xrm.Controls.TimelineWall"
+            "timelinewall": "Xrm.Controls.TimelineWall",
+            "quickform": "Xrm.Controls.QuickFormControl"
         };
  
         // Object to hold the type information.
@@ -74,6 +75,17 @@
         // Loop through all controls on the form.
         if (typeof Xrm.Page.getControl === 'function') {
             Xrm.Page.getControl().forEach((ctrl) => {
+                const ctrlType = ctrl.getControlType();
+                const mappedType = controlTypeMapping[ctrlType];
+                if (mappedType) {
+                    typeInfo.controls[ctrl.getName()] = mappedType;
+                }
+            });
+        }
+
+        // Loop through all Quick View controls on the form.
+        if (typeof Xrm.Page.ui.quickForms.get === 'function') {
+            Xrm.Page.ui.quickForms.get().forEach((ctrl) => {
                 const ctrlType = ctrl.getControlType();
                 const mappedType = controlTypeMapping[ctrlType];
                 if (mappedType) {
