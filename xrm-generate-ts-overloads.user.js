@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Overload Signatures
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.4
+// @version      1.5
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -78,6 +78,8 @@
                 const mappedType = controlTypeMapping[ctrlType];
                 if (mappedType) {
                     typeInfo.controls[ctrl.getName()] = mappedType;
+                    typeInfo.possibleTypes[ctrl.getName()] = [];
+                    typeInfo.possibleTypes[ctrl.getName()].push(mappedType);
                 }
             });
         }
