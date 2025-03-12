@@ -90,7 +90,6 @@
                 if (mappedType) {
                     typeInfo.possibleTypes[ctrl.getName()] = [];
                     typeInfo.possibleTypes[ctrl.getName()].push(mappedType);
-                    typeInfo.possibleTypes[ctrl.getName()].push("null");
                 }
             });
         }
