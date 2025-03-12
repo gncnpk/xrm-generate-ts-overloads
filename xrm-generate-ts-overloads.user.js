@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Overload Signatures
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.3
+// @version      1.4
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -53,27 +53,26 @@
             "timelinewall": "Xrm.Controls.TimelineWall",
             "quickform": "Xrm.Controls.QuickFormControl"
         };
- 
-        // Object to hold the type information.
-        const typeInfo = { attributes: {}, controls: {} };
- 
-        // Ensure that the Xrm.Page API is available.
-        if (typeof Xrm !== 'undefined' && Xrm.Page && typeof Xrm.Page.getAttribute === 'function') {
-            // Loop through all attributes on the form.
-            Xrm.Page.getAttribute().forEach((attr) => {
-                const attrType = attr.getAttributeType();
-                const mappedType = attributeTypeMapping[attrType];
-                if (mappedType) {
-                    typeInfo.attributes[attr.getName()] = mappedType;
-                }
-            });
-        } else {
-            alert("Xrm.Page is not available on this page.");
-            return;
+
+        var specificControlTypeMapping = {
+            "boolean": "Xrm.Controls.BooleanControl",
+            "datetime": "Xrm.Controls.DateControl",
+            "decimal": "Xrm.Controls.NumberControl",
+            "double": "Xrm.Controls.NumberControl",
+            "integer": "Xrm.Controls.NumberControl",
+            "lookup": "Xrm.Controls.LookupControl",
+            "memo": "Xrm.Controls.StringControl",
+            "money": "Xrm.Controls.NumberControl",
+            "multiselectoptionset": "Xrm.Controls.MultiselectOptionSetControl",
+            "optionset": "Xrm.Controls.OptionSetControl",
+            "string": "Xrm.Controls.StringControl"
         }
  
+        // Object to hold the type information.
+        const typeInfo = { attributes: {}, controls: {}, possibleTypes: {} };
+ 
         // Loop through all controls on the form.
-        if (typeof Xrm.Page.getControl === 'function') {
+        if (typeof Xrm !== 'undefined' && Xrm.Page && typeof Xrm.Page.getControl === 'function') {
             Xrm.Page.getControl().forEach((ctrl) => {
                 const ctrlType = ctrl.getControlType();
                 const mappedType = controlTypeMapping[ctrlType];
@@ -89,9 +88,31 @@
                 const ctrlType = ctrl.getControlType();
                 const mappedType = controlTypeMapping[ctrlType];
                 if (mappedType) {
-                    typeInfo.controls[ctrl.getName()] = mappedType;
+                    typeInfo.possibleTypes[ctrl.getName()] = [];
+                    typeInfo.possibleTypes[ctrl.getName()].push(mappedType);
+                    typeInfo.possibleTypes[ctrl.getName()].push("null");
                 }
             });
+        }
+
+        // Ensure that the Xrm.Page API is available.
+        if (typeof Xrm.Page.getAttribute === 'function') {
+            // Loop through all attributes on the form.
+            Xrm.Page.getAttribute().forEach((attr) => {
+                const attrType = attr.getAttributeType();
+                const mappedType = attributeTypeMapping[attrType];
+                const mappedControlType = specificControlTypeMapping[attrType];
+                if (mappedType) {
+                    typeInfo.attributes[attr.getName()] = mappedType;
+                    typeInfo.controls[attr.getName()] = mappedControlType;
+                    typeInfo.possibleTypes[attr.getName()] = [];
+                    typeInfo.possibleTypes[attr.getName()].push(mappedType);
+                    typeInfo.possibleTypes[attr.getName()].push(mappedControlType);
+                }
+            });
+        } else {
+            alert("Xrm.Page is not available on this page.");
+            return;
         }
  
         // Build the TypeScript overload string.
@@ -100,6 +121,20 @@
 // Do not modify this file manually.
  
 declare namespace Xrm {
+    namespace Collection {
+        interface ItemCollection<T> {
+`
+for (const [possibleTypeName, possibleTypesArray] of Object.entries(typeInfo.possibleTypes)) {
+    let possibleTypeTemplate = "";
+    for (const possibleType of possibleTypesArray) {
+        possibleTypeTemplate += ` TSubType extends ${possibleType} ? ${possibleType} : `;
+    }
+    outputTS += `    get<TSubType extends T>(itemName: "${possibleTypeName}"):${possibleTypeTemplate}never;\n`;
+}
+outputTS += `
+    }
+}`
+outputTS += `
   interface FormContext {
 `;
         for (const [attributeName, attributeType] of Object.entries(typeInfo.attributes)) {
