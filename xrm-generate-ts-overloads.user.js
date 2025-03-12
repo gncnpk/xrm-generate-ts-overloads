@@ -106,7 +106,7 @@ declare namespace Xrm {
         // The textarea is set to readonly to prevent editing.
         const w = window.open('', '_blank', 'width=600,height=400,menubar=no,toolbar=no,location=no,resizable=yes');
         if (w) {
-            w.document.write('<html><head><title>Xrm Type Info</title></head><body>');
+            w.document.write('<html><head><title>TypeScript Overload Signatures</title></head><body>');
             w.document.write('<textarea readonly style="width:100%; height:90%;">' + outputTS + '</textarea>');
             w.document.write('</body></html>');
             w.document.close();
