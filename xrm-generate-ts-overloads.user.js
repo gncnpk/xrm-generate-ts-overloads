@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Overload Signatures
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.91
+// @version      1.92
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -174,7 +174,7 @@ for(const [entityName, typeInfo] of Object.entries(entityTypeInfos)) {
         for(const enumValue of enumValues.values) {
             enumTemplate.push(`   ${enumValue.text.replace(/\W/g, '')} = ${enumValue.value}`);
             textLiteralTypes.push(`"${enumValue.text}"`);
-            valueLiteralTypes.push(`${enumValue.text.replace(/\W/g, '')}`);
+            valueLiteralTypes.push(`${enumName}.${enumValue.text.replace(/\W/g, '')}`);
         }
 outputTS += generateComments("Entity", entityName);
 outputTS += `
@@ -184,7 +184,7 @@ ${enumTemplate.join(",\n")}
 `
 outputTS += generateComments("Entity", entityName);
 outputTS += `
-interface ${enumValues.attribute}_options extends Xrm.OptionSetValue {
+interface ${enumValues.attribute}_value extends Xrm.OptionSetValue {
 text: ${textLiteralTypes.join(" | ")};
 value: ${valueLiteralTypes.join(" | ")};  
 }
@@ -192,8 +192,8 @@ value: ${valueLiteralTypes.join(" | ")};
 outputTS += generateComments("Entity", entityName);
 outputTS += `
 interface ${enumValues.attribute} extends Xrm.Attributes.OptionSetAttribute {
-  getOptions(): ${enumValues.attribute}_options[];
-  getSelectedOption(): ${enumValues.attribute}_options | null;
+  getOptions(): ${enumValues.attribute}_value[];
+  getSelectedOption(): ${enumValues.attribute}_value | null;
   getValue(): ${enumName} | null;
   setValue(value: ${enumName} | null): void;
 }
