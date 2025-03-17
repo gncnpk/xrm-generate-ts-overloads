@@ -11,7 +11,13 @@
  
 (function() {
     'use strict';
- 
+
+    const generateComments = function(fieldName, fieldValue) {
+    return `
+/**
+* ${fieldName}: ${fieldValue}
+*/`
+    }
     // Create a button element and style it to be fixed in the bottom-right corner.
     const btn = document.createElement('button');
     btn.textContent = 'Generate TypeScript Signatures';
@@ -169,15 +175,13 @@ for(const [entityName, typeInfo] of Object.entries(entityTypeInfos)) {
         for(const enumValue of enumValues.values) {
             enumTemplate.push(`   ${enumValue.text.replace(/\W/g, '')} = ${enumValue.value}`);
         }
-outputTS += `
-/**
- * Entity: ${entityName}
- */`
+outputTS += generateComments("Entity", entityName);
 outputTS += `
 const enum ${enumName} {
 ${enumTemplate.join(",\n")}
 }
 `
+outputTS += generateComments("Entity", entityName);
 outputTS += `
 interface ${enumValues.attribute} extends Xrm.Attributes.OptionSetAttribute {
   getValue(): ${enumName} | null;
@@ -197,11 +201,7 @@ for(const [entityName, typeInfo] of Object.entries(entityTypeInfos)) {
         for (const possibleType of possibleTypesArray) {
             possibleTypeTemplate += ` TSubType extends ${possibleType} ? ${possibleType} :`;
         }
-        outputTS += `
-            /**
-             * Entity: ${entityName}
-             */
-            `
+        outputTS += generateComments("Entity", entityName);
         outputTS += ` get<TSubType extends T>(itemName: "${possibleTypeName}"):${possibleTypeTemplate} never;\n`;
     }
 }
@@ -213,19 +213,11 @@ outputTS += `
 `;
 for(const [entityName, typeInfo] of Object.entries(entityTypeInfos)) {
     for (const [attributeName, attributeType] of Object.entries(typeInfo.attributes)) {
-        outputTS += `
-        /**
-         * Entity: ${entityName}
-         */
-        `
+        outputTS += generateComments("Entity", entityName);
         outputTS += ` getAttribute(attributeName: "${attributeName}"): ${attributeType};\n`;
     }
     for (const [controlName, controlType] of Object.entries(typeInfo.controls)) {
-        outputTS += `
-        /**
-         * Entity: ${entityName}
-         */
-        `
+        outputTS += generateComments("Entity", entityName);
         outputTS += ` getControl(controlName: "${controlName}"): ${controlType};\n`;
     }
 } 
