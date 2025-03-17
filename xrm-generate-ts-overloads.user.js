@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Overload Signatures
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.9
+// @version      1.91
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -13,10 +13,7 @@
     'use strict';
 
     const generateComments = function(fieldName, fieldValue) {
-    return `
-/**
-* ${fieldName}: ${fieldValue}
-*/`
+    return `\n/** ${fieldName}: ${fieldValue} */`
     }
     // Create a button element and style it to be fixed in the bottom-right corner.
     const btn = document.createElement('button');
@@ -172,8 +169,12 @@
 for(const [entityName, typeInfo] of Object.entries(entityTypeInfos)) {
     for(const [enumName, enumValues] of Object.entries(typeInfo.enums)) {
         let enumTemplate = [];
+        let textLiteralTypes = [];
+        let valueLiteralTypes = [];
         for(const enumValue of enumValues.values) {
             enumTemplate.push(`   ${enumValue.text.replace(/\W/g, '')} = ${enumValue.value}`);
+            textLiteralTypes.push(`"${enumValue.text}"`);
+            valueLiteralTypes.push(`${enumValue.text.replace(/\W/g, '')}`);
         }
 outputTS += generateComments("Entity", entityName);
 outputTS += `
@@ -183,7 +184,16 @@ ${enumTemplate.join(",\n")}
 `
 outputTS += generateComments("Entity", entityName);
 outputTS += `
+interface ${enumValues.attribute}_options extends Xrm.OptionSetValue {
+text: ${textLiteralTypes.join(" | ")};
+value: ${valueLiteralTypes.join(" | ")};  
+}
+`
+outputTS += generateComments("Entity", entityName);
+outputTS += `
 interface ${enumValues.attribute} extends Xrm.Attributes.OptionSetAttribute {
+  getOptions(): ${enumValues.attribute}_options[];
+  getSelectedOption(): ${enumValues.attribute}_options | null;
   getValue(): ${enumName} | null;
   setValue(value: ${enumName} | null): void;
 }
@@ -202,7 +212,7 @@ for(const [entityName, typeInfo] of Object.entries(entityTypeInfos)) {
             possibleTypeTemplate += ` TSubType extends ${possibleType} ? ${possibleType} :`;
         }
         outputTS += generateComments("Entity", entityName);
-        outputTS += ` get<TSubType extends T>(itemName: "${possibleTypeName}"):${possibleTypeTemplate} never;\n`;
+        outputTS += `\nget<TSubType extends T>(itemName: "${possibleTypeName}"):${possibleTypeTemplate} never;\n`;
     }
 }
 outputTS += `
@@ -214,11 +224,11 @@ outputTS += `
 for(const [entityName, typeInfo] of Object.entries(entityTypeInfos)) {
     for (const [attributeName, attributeType] of Object.entries(typeInfo.attributes)) {
         outputTS += generateComments("Entity", entityName);
-        outputTS += ` getAttribute(attributeName: "${attributeName}"): ${attributeType};\n`;
+        outputTS += `\ngetAttribute(attributeName: "${attributeName}"): ${attributeType};\n`;
     }
     for (const [controlName, controlType] of Object.entries(typeInfo.controls)) {
         outputTS += generateComments("Entity", entityName);
-        outputTS += ` getControl(controlName: "${controlName}"): ${controlType};\n`;
+        outputTS += `\ngetControl(controlName: "${controlName}"): ${controlType};\n`;
     }
 } 
         outputTS += `  }

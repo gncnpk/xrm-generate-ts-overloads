@@ -19,4 +19,5 @@ You can find the source code here: [xrm-generate-ts-overloads](https://github.co
 
 ### Interfaces
 * OptionSet Attributes
+* OptionSet Values
 
