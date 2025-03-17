@@ -69,12 +69,13 @@
         }
  
         // Object to hold the type information.
-        const typeInfo = { attributes: {}, controls: {}, possibleTypes: {} };
-
-        const enums = {};
+        const typeInfoTemplate = { attributes: {}, controls: {}, possibleTypes: {}, enums: {} }
+        const entityTypeInfos = {};
  
         // Loop through all controls on the form.
         if (typeof Xrm !== 'undefined' && Xrm.Page && typeof Xrm.Page.getControl === 'function') {
+            let entity = Xrm.Page.data.entity.getEntityName();
+            let typeInfo = entityTypeInfos[entity] = entityTypeInfos[entity] ?? typeInfoTemplate;
             Xrm.Page.getControl().forEach((ctrl) => {
                 const ctrlType = ctrl.getControlType();
                 const mappedType = controlTypeMapping[ctrlType];
@@ -91,11 +92,13 @@
 
         // Loop through all enums on the form.
         if (typeof Xrm.Page.getAttribute === 'function') {
+            let entity = Xrm.Page.data.entity.getEntityName();
+            let typeInfo = entityTypeInfos[entity] = entityTypeInfos[entity] ?? typeInfoTemplate;
             Xrm.Page.getAttribute().forEach((attr) => {
                 if (attr.getAttributeType() === "optionset" && attr.controls.get().length > 0) {
                     const enumValues = attr.getOptions();
                     if (enumValues) {
-                        enums[attr.controls.get(0).getLabel().replace(/\s+/g, '')] = enumValues;
+                        typeInfo.enums[attr.controls.get(0).getLabel().replace(/\s+/g, '')] = enumValues;
                     }
                 }
             });
@@ -103,19 +106,36 @@
 
         // Loop through all Quick View controls on the form.
         if (typeof Xrm.Page.ui.quickForms.get === 'function') {
+            let entity = Xrm.Page.data.entity.getEntityName();
+            let typeInfo = entityTypeInfos[entity] = entityTypeInfos[entity] ?? typeInfoTemplate;
             Xrm.Page.ui.quickForms.get().forEach((ctrl) => {
                 const ctrlType = ctrl.getControlType();
                 const mappedType = controlTypeMapping[ctrlType];
                 if (mappedType) {
-                    typeInfo.possibleTypes[ctrl.getName()] = [];
+                    typeInfo.possibleTypes[ctrl.getName()] = typeInfo.possibleTypes[ctrl.getName()] ?? [];
                     typeInfo.possibleTypes[ctrl.getName()].push(mappedType);
                 }
             });
         }
 
-        // Ensure that the Xrm.Page API is available.
+        // Loop through all tabs and sections on the form.
+        if (typeof Xrm.Page.ui.tabs.get === 'function') {
+            let entity = Xrm.Page.data.entity.getEntityName();
+            let typeInfo = entityTypeInfos[entity] = entityTypeInfos[entity] ?? typeInfoTemplate;
+            Xrm.Page.ui.tabs.get().forEach((tab) => {
+                typeInfo.possibleTypes[tab.getName()] = typeInfo.possibleTypes[tab.getName()] ?? [];
+                typeInfo.possibleTypes[tab.getName()].push("Xrm.Controls.Tab");
+                tab.sections.forEach((section) => {
+                    typeInfo.possibleTypes[section.getName()] = typeInfo.possibleTypes[section.getName()] ?? [];
+                    typeInfo.possibleTypes[section.getName()].push("Xrm.Controls.Section");   
+                });
+            });
+        }
+
+        // Loop through all attributes on the form.
         if (typeof Xrm.Page.getAttribute === 'function') {
-            // Loop through all attributes on the form.
+            let entity = Xrm.Page.data.entity.getEntityName();
+            let typeInfo = entityTypeInfos[entity] = entityTypeInfos[entity] ?? typeInfoTemplate;
             Xrm.Page.getAttribute().forEach((attr) => {
                 const attrType = attr.getAttributeType();
                 const mappedType = attributeTypeMapping[attrType];
@@ -135,28 +155,41 @@
 // It extends the Xrm.FormContext interface with overloads for getAttribute and getControl.
 // Do not modify this file manually.
 `
-for(const [enumName, enumValues] of Object.entries(enums)) {
-    let enumTemplate = [];
-    for(const enumValue of enumValues) {
-        enumTemplate.push(`   ${enumValue.text.replace(/\W/g, '')} = ${enumValue.value}`);
-    }
+for(const [entityName, typeInfo] of Object.entries(entityTypeInfos)) {
+    for(const [enumName, enumValues] of Object.entries(typeInfo.enums)) {
+        let enumTemplate = [];
+        for(const enumValue of enumValues) {
+            enumTemplate.push(`   ${enumValue.text.replace(/\W/g, '')} = ${enumValue.value}`);
+        }
 outputTS += `
-enum ${enumName} {
+/**
+ * Entity: ${entityName}
+ */`
+outputTS += `
+const enum ${enumName} {
 ${enumTemplate.join(",\n")}
 }
 `
+    }
 }
 outputTS += `
 declare namespace Xrm {
     namespace Collection {
         interface ItemCollection<T> {
 `
-for (const [possibleTypeName, possibleTypesArray] of Object.entries(typeInfo.possibleTypes)) {
-    let possibleTypeTemplate = "";
-    for (const possibleType of possibleTypesArray) {
-        possibleTypeTemplate += ` TSubType extends ${possibleType} ? ${possibleType} : `;
+for(const [entityName, typeInfo] of Object.entries(entityTypeInfos)) {
+    for (const [possibleTypeName, possibleTypesArray] of Object.entries(typeInfo.possibleTypes)) {
+        let possibleTypeTemplate = "";
+        for (const possibleType of possibleTypesArray) {
+            possibleTypeTemplate += ` TSubType extends ${possibleType} ? ${possibleType} :`;
+        }
+        outputTS += `
+            /**
+             * Entity: ${entityName}
+             */
+            `
+        outputTS += ` get<TSubType extends T>(itemName: "${possibleTypeName}"):${possibleTypeTemplate} never;\n`;
     }
-    outputTS += `    get<TSubType extends T>(itemName: "${possibleTypeName}"):${possibleTypeTemplate}never;\n`;
 }
 outputTS += `
     }
@@ -164,14 +197,24 @@ outputTS += `
 outputTS += `
   interface FormContext {
 `;
-        for (const [attributeName, attributeType] of Object.entries(typeInfo.attributes)) {
-            outputTS += `    getAttribute(attributeName: "${attributeName}"): ${attributeType};\n`;
-        }
- 
-        for (const [controlName, controlType] of Object.entries(typeInfo.controls)) {
-            outputTS += `    getControl(controlName: "${controlName}"): ${controlType};\n`;
-        }
- 
+for(const [entityName, typeInfo] of Object.entries(entityTypeInfos)) {
+    for (const [attributeName, attributeType] of Object.entries(typeInfo.attributes)) {
+        outputTS += `
+        /**
+         * Entity: ${entityName}
+         */
+        `
+        outputTS += ` getAttribute(attributeName: "${attributeName}"): ${attributeType};\n`;
+    }
+    for (const [controlName, controlType] of Object.entries(typeInfo.controls)) {
+        outputTS += `
+        /**
+         * Entity: ${entityName}
+         */
+        `
+        outputTS += ` getControl(controlName: "${controlName}"): ${controlType};\n`;
+    }
+} 
         outputTS += `  }
 }
 `;
