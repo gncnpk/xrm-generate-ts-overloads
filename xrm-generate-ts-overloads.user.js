@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Overload Signatures
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.5
+// @version      1.6
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -70,6 +70,8 @@
  
         // Object to hold the type information.
         const typeInfo = { attributes: {}, controls: {}, possibleTypes: {} };
+
+        const enums = {};
  
         // Loop through all controls on the form.
         if (typeof Xrm !== 'undefined' && Xrm.Page && typeof Xrm.Page.getControl === 'function') {
@@ -80,6 +82,21 @@
                     typeInfo.controls[ctrl.getName()] = mappedType;
                     typeInfo.possibleTypes[ctrl.getName()] = [];
                     typeInfo.possibleTypes[ctrl.getName()].push(mappedType);
+                }
+            });
+        } else {
+            alert("Xrm.Page is not available on this page.");
+            return;
+        }
+
+        // Loop through all enums on the form.
+        if (typeof Xrm.Page.getAttribute === 'function') {
+            Xrm.Page.getAttribute().forEach((attr) => {
+                if (attr.getAttributeType() === "optionset" && attr.controls.get().length > 0) {
+                    const enumValues = attr.getOptions();
+                    if (enumValues) {
+                        enums[attr.controls.get(0).getLabel().replace(/\s+/g, '')] = enumValues;
+                    }
                 }
             });
         }
@@ -111,16 +128,25 @@
                     typeInfo.possibleTypes[attr.getName()].push(mappedControlType);
                 }
             });
-        } else {
-            alert("Xrm.Page is not available on this page.");
-            return;
         }
  
         // Build the TypeScript overload string.
         let outputTS = `// This file is generated automatically.
 // It extends the Xrm.FormContext interface with overloads for getAttribute and getControl.
 // Do not modify this file manually.
- 
+`
+for(const [enumName, enumValues] of Object.entries(enums)) {
+    let enumTemplate = [];
+    for(const enumValue of enumValues) {
+        enumTemplate.push(`   ${enumValue.text.replace(/\W/g, '')} = ${enumValue.value}`);
+    }
+outputTS += `
+enum ${enumName} {
+${enumTemplate.join(",\n")}
+}
+`
+}
+outputTS += `
 declare namespace Xrm {
     namespace Collection {
         interface ItemCollection<T> {
