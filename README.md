@@ -5,6 +5,7 @@ Automatically creates TypeScript type definitions compatible with [@types/xrm](h
 You can find the source code here: [xrm-generate-ts-overloads](https://github.com/gncnpk/xrm-generate-ts-overloads)
 
 ## Generated Form-Specific Definitions
+
 ### Method Return Types
 * *.getAttribute()
 * *.getControl()
@@ -12,8 +13,10 @@ You can find the source code here: [xrm-generate-ts-overloads](https://github.co
 * *.controls.get()
 * *.sections.get()
 * *.ui.tabs.get()
+
 ### Enums
 * OptionSet Options
+
 ### Interfaces
 * OptionSet Attributes
 
