@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Overload Signatures
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.7
+// @version      1.8
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -90,20 +90,6 @@
             return;
         }
 
-        // Loop through all enums on the form.
-        if (typeof Xrm.Page.getAttribute === 'function') {
-            let entity = Xrm.Page.data.entity.getEntityName();
-            let typeInfo = entityTypeInfos[entity] = entityTypeInfos[entity] ?? typeInfoTemplate;
-            Xrm.Page.getAttribute().forEach((attr) => {
-                if (attr.getAttributeType() === "optionset" && attr.controls.get().length > 0) {
-                    const enumValues = attr.getOptions();
-                    if (enumValues) {
-                        typeInfo.enums[attr.controls.get(0).getLabel().replace(/\s+/g, '')] = enumValues;
-                    }
-                }
-            });
-        }
-
         // Loop through all Quick View controls on the form.
         if (typeof Xrm.Page.ui.quickForms.get === 'function') {
             let entity = Xrm.Page.data.entity.getEntityName();
@@ -144,8 +130,30 @@
                     typeInfo.attributes[attr.getName()] = mappedType;
                     typeInfo.controls[attr.getName()] = mappedControlType;
                     typeInfo.possibleTypes[attr.getName()] = [];
-                    typeInfo.possibleTypes[attr.getName()].push(mappedType);
+                    if (attrType !== "optionset") {
+                        typeInfo.possibleTypes[attr.getName()].push(mappedType);
+                    }
                     typeInfo.possibleTypes[attr.getName()].push(mappedControlType);
+                }
+            });
+        }
+
+        // Loop through all enums on the form.
+        if (typeof Xrm.Page.getAttribute === 'function') {
+            let entity = Xrm.Page.data.entity.getEntityName();
+            let typeInfo = entityTypeInfos[entity] = entityTypeInfos[entity] ?? typeInfoTemplate;
+            Xrm.Page.getAttribute().forEach((attr) => {
+                if (attr.getAttributeType() === "optionset" && attr.controls.get().length > 0) {
+                    const enumValues = attr.getOptions();
+                    const attrName = attr.getName();
+                    const controlName = attr.controls.get(0).getLabel().replace(/\s+/g, '');
+                    if (enumValues) {
+                        typeInfo.enums[controlName] = {attribute: "", values: []};
+                        typeInfo.enums[controlName].values = enumValues;
+                        typeInfo.enums[controlName].attribute = attrName;
+                        typeInfo.attributes[attrName] = attrName;
+                        typeInfo.possibleTypes[attrName].push(attrName);
+                    }
                 }
             });
         }
@@ -158,7 +166,7 @@
 for(const [entityName, typeInfo] of Object.entries(entityTypeInfos)) {
     for(const [enumName, enumValues] of Object.entries(typeInfo.enums)) {
         let enumTemplate = [];
-        for(const enumValue of enumValues) {
+        for(const enumValue of enumValues.values) {
             enumTemplate.push(`   ${enumValue.text.replace(/\W/g, '')} = ${enumValue.value}`);
         }
 outputTS += `
@@ -168,6 +176,12 @@ outputTS += `
 outputTS += `
 const enum ${enumName} {
 ${enumTemplate.join(",\n")}
+}
+`
+outputTS += `
+interface ${enumValues.attribute} extends Xrm.Attributes.OptionSetAttribute {
+  getValue(): ${enumName} | null;
+  setValue(value: ${enumName} | null): void;
 }
 `
     }

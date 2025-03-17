@@ -14,4 +14,6 @@ You can find the source code here: [xrm-generate-ts-overloads](https://github.co
 * *.ui.tabs.get()
 ### Enums
 * OptionSet Options
+### Interfaces
+* OptionSet Attributes
 
