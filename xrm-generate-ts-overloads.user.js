@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Overload Signatures
+// @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Definitions
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.941
+// @version      1.942
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -17,7 +17,7 @@
   };
   // Create a button element and style it to be fixed in the bottom-right corner.
   const btn = document.createElement("button");
-  btn.textContent = "Generate TypeScript Signatures";
+  btn.textContent = "Generate TypeScript Definitions";
   btn.style.position = "fixed";
   btn.style.bottom = "20px";
   btn.style.right = "20px";
@@ -331,7 +331,7 @@ namespace Controls {
     );
     if (w) {
       w.document.write(
-        "<html><head><title>TypeScript Overload Signatures</title></head><body>"
+        "<html><head><title>TypeScript Definitions</title></head><body>"
       );
       w.document.write(
         '<textarea readonly style="width:100%; height:90%;">' +
