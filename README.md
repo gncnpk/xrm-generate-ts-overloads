@@ -21,3 +21,10 @@ You can find the source code here: [xrm-generate-ts-overloads](https://github.co
 * OptionSet Attributes
 * OptionSet Values
 
+### Subgrid
+* Attributes
+
+### Quick Forms/Views
+* Controls
+
+
