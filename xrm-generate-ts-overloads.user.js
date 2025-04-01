@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Definitions
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.942
+// @version      1.953
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -74,12 +74,28 @@
 
     // Object to hold the type information.
     const typeInfo = {
-      attributes: {},
-      controls: {},
-      possibleTypes: {},
-      enums: {},
+      subGrids: {},
+      quickViews: {},
+      formAttributes: {},
+      formControls: {},
+      formPossibleTypes: {},
+      formEnums: {},
       quickViewControls: {},
+      quickViewAttributes: {},
     };
+    class Subgrid {
+      constructor() {
+        this.attributes = {};
+        this.enums = {};
+      }
+    }
+    class QuickForm {
+      constructor() {
+        this.attributes = {};
+        this.controls = {};
+        this.enums = {};
+      }
+    }
 
     // Loop through all controls on the form.
     if (
@@ -91,9 +107,9 @@
         const ctrlType = ctrl.getControlType();
         const mappedType = controlTypeMapping[ctrlType];
         if (mappedType) {
-          typeInfo.controls[ctrl.getName()] = mappedType;
-          typeInfo.possibleTypes[ctrl.getName()] = [];
-          typeInfo.possibleTypes[ctrl.getName()].push(mappedType);
+          typeInfo.formControls[ctrl.getName()] = mappedType;
+          typeInfo.formPossibleTypes[ctrl.getName()] = [];
+          typeInfo.formPossibleTypes[ctrl.getName()].push(mappedType);
         }
       });
     } else {
@@ -101,41 +117,16 @@
       return;
     }
 
-    // Loop through all Quick View controls on the form.
-    if (typeof Xrm.Page.ui.quickForms.get === "function") {
-      Xrm.Page.ui.quickForms.get().forEach((ctrl) => {
-        const ctrlType = ctrl.getControlType();
-        const mappedType = controlTypeMapping[ctrlType];
-        if (mappedType) {
-          typeInfo.possibleTypes[ctrl.getName()] =
-            typeInfo.possibleTypes[ctrl.getName()] ?? [];
-          typeInfo.possibleTypes[ctrl.getName()].push(mappedType);
-        }
-        ctrl.getControl().forEach((subCtrl) => {
-          if (typeof subCtrl.getAttribute !== "function") {
-            return;
-          }
-          const subCtrlAttrType = subCtrl.getAttribute().getAttributeType();
-          const mappedControlType =
-            specificControlTypeMapping[subCtrlAttrType] ??
-            controlTypeMapping[subCtrl.getControlType()];
-          if (mappedControlType) {
-            typeInfo.quickViewControls[subCtrl.getName()] = mappedControlType;
-          }
-        });
-      });
-    }
-
     // Loop through all tabs and sections on the form.
     if (typeof Xrm.Page.ui.tabs.get === "function") {
       Xrm.Page.ui.tabs.get().forEach((tab) => {
-        typeInfo.possibleTypes[tab.getName()] =
-          typeInfo.possibleTypes[tab.getName()] ?? [];
-        typeInfo.possibleTypes[tab.getName()].push("Xrm.Controls.Tab");
+        typeInfo.formPossibleTypes[tab.getName()] =
+          typeInfo.formPossibleTypes[tab.getName()] ?? [];
+        typeInfo.formPossibleTypes[tab.getName()].push("Xrm.Controls.Tab");
         tab.sections.forEach((section) => {
-          typeInfo.possibleTypes[section.getName()] =
-            typeInfo.possibleTypes[section.getName()] ?? [];
-          typeInfo.possibleTypes[section.getName()].push(
+          typeInfo.formPossibleTypes[section.getName()] =
+            typeInfo.formPossibleTypes[section.getName()] ?? [];
+          typeInfo.formPossibleTypes[section.getName()].push(
             "Xrm.Controls.Section"
           );
         });
@@ -150,12 +141,12 @@
         const mappedType = attributeTypeMapping[attrType];
         const mappedControlType = specificControlTypeMapping[attrType];
         if (mappedType) {
-          typeInfo.attributes[attrName] = mappedType;
-          typeInfo.controls[attrName] = mappedControlType;
-          typeInfo.possibleTypes[attrName] = [];
+          typeInfo.formAttributes[attrName] = mappedType;
+          typeInfo.formControls[attrName] = mappedControlType;
+          typeInfo.formPossibleTypes[attrName] = [];
           if (attrType !== "optionset") {
-            typeInfo.possibleTypes[attrName].push(mappedType);
-            typeInfo.possibleTypes[attrName].push(mappedControlType);
+            typeInfo.formPossibleTypes[attrName].push(mappedType);
+            typeInfo.formPossibleTypes[attrName].push(mappedControlType);
           }
         }
         if (
@@ -164,12 +155,12 @@
         ) {
           const enumValues = attr.getOptions();
           if (enumValues) {
-            typeInfo.enums[attrName] = { attribute: "", values: [] };
-            typeInfo.enums[attrName].values = enumValues;
-            typeInfo.enums[attrName].attribute = attrName;
-            typeInfo.attributes[attrName] = `${attrName}_attribute`;
-            typeInfo.possibleTypes[attrName].push(`${attrName}_attribute`);
-            typeInfo.possibleTypes[attrName].push(mappedControlType);
+            typeInfo.formEnums[attrName] = { attribute: "", values: [] };
+            typeInfo.formEnums[attrName].values = enumValues;
+            typeInfo.formEnums[attrName].attribute = attrName;
+            typeInfo.formAttributes[attrName] = `${attrName}_attribute`;
+            typeInfo.formPossibleTypes[attrName].push(`${attrName}_attribute`);
+            typeInfo.formPossibleTypes[attrName].push(mappedControlType);
           }
         }
       });
@@ -184,18 +175,16 @@
             "customsubgrid:MscrmControls.Grid.GridControl"
         ) {
           const gridRow = ctrl.getGrid().getRows().get(0);
+          const gridName = ctrl.getName();
+          let subgrid = (typeInfo.subGrids[gridName] = new Subgrid());
+          typeInfo.formControls[gridName] = `${gridName}_gridcontrol`;
           if (gridRow !== null) {
             gridRow.data.entity.attributes.forEach((attr) => {
               const attrType = attr.getAttributeType();
               const attrName = attr.getName();
               const mappedType = attributeTypeMapping[attrType];
-              const mappedControlType = specificControlTypeMapping[attrType];
               if (mappedType) {
-                typeInfo.attributes[attrName] = mappedType;
-                typeInfo.possibleTypes[attrName] = [];
-                if (attrType !== "optionset") {
-                  typeInfo.possibleTypes[attrName].push(mappedType);
-                }
+                subgrid.attributes[attrName] = mappedType;
               }
               if (
                 attr.getAttributeType() === "optionset" &&
@@ -203,18 +192,62 @@
               ) {
                 const enumValues = attr.getOptions();
                 if (enumValues) {
-                  typeInfo.enums[attrName] = { attribute: "", values: [] };
-                  typeInfo.enums[attrName].values = enumValues;
-                  typeInfo.enums[attrName].attribute = attrName;
-                  typeInfo.attributes[attrName] = `${attrName}_attribute`;
-                  typeInfo.possibleTypes[attrName].push(
-                    `${attrName}_attribute`
-                  );
+                  subgrid.enums[attrName] = { attribute: "", values: [] };
+                  subgrid.enums[attrName].values = enumValues;
+                  subgrid.enums[attrName].attribute = attrName;
+                  subgrid.attributes[attrName] = `${attrName}_attribute`;
                 }
               }
             });
           }
         }
+      });
+    }
+
+    // Loop through all Quick View controls and attributes on the form.
+    if (typeof Xrm.Page.ui.quickForms.get === "function") {
+      Xrm.Page.ui.quickForms.get().forEach((ctrl) => {
+        const quickViewName = ctrl.getName();
+        let quickView = (typeInfo.quickViews[quickViewName] = new QuickForm());
+        const ctrlType = ctrl.getControlType();
+        const mappedType = controlTypeMapping[ctrlType];
+        if (mappedType) {
+          typeInfo.formPossibleTypes[ctrl.getName()] =
+            typeInfo.formPossibleTypes[ctrl.getName()] ?? [];
+          typeInfo.formPossibleTypes[ctrl.getName()].push(
+            `${quickViewName}_quickformcontrol`
+          );
+        }
+        typeInfo.formControls[quickViewName] = `${quickViewName}_quickformcontrol`;
+        ctrl.getControl().forEach((subCtrl) => {
+          if (typeof subCtrl.getAttribute !== "function") {
+            return;
+          }
+          const subCtrlAttrType = subCtrl.getAttribute().getAttributeType();
+          const mappedControlType =
+            specificControlTypeMapping[subCtrlAttrType] ??
+            controlTypeMapping[subCtrl.getControlType()];
+          if (mappedControlType) {
+            quickView.controls[subCtrl.getName()] = mappedControlType;
+          }
+        });
+        ctrl.getAttribute().forEach((attr) => {
+          const attrType = attr.getAttributeType();
+          const attrName = attr.getName();
+          const mappedType = attributeTypeMapping[attrType];
+          if (mappedType) {
+            quickView.attributes[attrName] = mappedType;
+          }
+          if (attrType === "optionset" && attr.controls.get().length > 0) {
+            const enumValues = attr.getOptions();
+            if (enumValues) {
+              quickView.enums[attrName] = { attribute: "", values: [] };
+              quickView.enums[attrName].values = enumValues;
+              quickView.enums[attrName].attribute = attrName;
+              quickView.attributes[attrName] = `${attrName}_attribute`;
+            }
+          }
+        });
       });
     }
 
@@ -226,7 +259,7 @@
 `;
     let extendedAttributeTypes = [];
     for (const [originalEnumName, enumValues] of Object.entries(
-      typeInfo.enums
+      typeInfo.formEnums
     )) {
       let enumName = `${originalEnumName}_enum`;
       let enumTemplate = [];
@@ -266,35 +299,169 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
 `;
       extendedAttributeTypes.push(`${enumValues.attribute}_attribute`);
     }
-    outputTS += `
+    for (const [subgridName, subgrid] of Object.entries(typeInfo.subGrids)) {
+      for (const [enumName, enumValues] of Object.entries(subgrid.enums)) {
+        let enumTemplate = [];
+        let textLiteralTypes = [];
+        let valueLiteralTypes = [];
+        for (const enumValue of enumValues.values) {
+          enumTemplate.push(
+            `   ${enumValue.text.replace(/\W/g, "").replace(/[0-9]/g, "")} = ${
+              enumValue.value
+            }`
+          );
+          textLiteralTypes.push(`"${enumValue.text}"`);
+          valueLiteralTypes.push(
+            `${enumName}.${enumValue.text
+              .replace(/\W/g, "")
+              .replace(/[0-9]/g, "")}`
+          );
+        }
+        outputTS += `
+const enum ${enumName}_enum {
+${enumTemplate.join(",\n")}
+}
+`;
+        outputTS += `
+interface ${enumValues.attribute}_value extends Xrm.OptionSetValue {
+text: ${textLiteralTypes.join(" | ")};
+value: ${valueLiteralTypes.join(" | ")};
+  }
+`;
+        outputTS += `
+interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttribute {
+  getOptions(): ${enumValues.attribute}_value[];
+  getSelectedOption(): ${enumValues.attribute}_value | null;
+  getValue(): ${enumName}_enum | null;
+  setValue(value: ${enumName}_enum | null): void;
+  }
+  `;
+      }
 
-type extendedAttributeTypes = Xrm.Attributes.SpecificAttributeTypes | ${extendedAttributeTypes.join(
-      " | "
-    )}
+      outputTS += `
+  interface ${subgridName}_attributes extends Xrm.Collection.ItemCollection {`;
+      for (const [itemName, itemType] of Object.entries(subgrid.attributes)) {
+        outputTS += `get(itemName:"${itemName}"): ${itemType};\n`;
+      }
+      outputTS += `}
+  `;
+
+      outputTS += `
+
+  interface ${subgridName}_entity extends Xrm.Entity {
+    attributes: ${subgridName}_attributes;
+  }
+  interface ${subgridName}_data extends Xrm.Data {
+    entity: ${subgridName}_entity;
+  }
+  
+  interface ${subgridName}_gridrow extends Xrm.Controls.Grid.GridRow {
+    data: ${subgridName}_data;
+  }
+  
+  interface ${subgridName}_grid extends Xrm.Controls.Grid {
+    getRows(): Xrm.Collection.ItemCollection<${subgridName}_gridrow>;
+  }
+  
+  interface ${subgridName}_gridcontrol extends Xrm.Controls.GridControl {
+    getGrid(): ${subgridName}_grid;
+  }
+  interface ${subgridName}_context extends Xrm.FormContext {`
+  for (const [itemName, itemType] of Object.entries(subgrid.attributes)) {
+    outputTS += `getAttribute(attributeName:"${itemName}"): ${itemType};\n`;
+  }
+  outputTS += `getAttribute(delegateFunction?: Collection.MatchingDelegate<Attributes.SpecificAttributeTypes>): ${subgridName}_attributes;`;
+  outputTS += `
+  }
+  
+`;
+    }
+    for (const [quickViewName, quickView] of Object.entries(
+      typeInfo.quickViews
+    )) {
+      for (const [enumName, enumValues] of Object.entries(quickView.enums)) {
+        let enumTemplate = [];
+        let textLiteralTypes = [];
+        let valueLiteralTypes = [];
+        for (const enumValue of enumValues.values) {
+          enumTemplate.push(
+            `   ${enumValue.text.replace(/\W/g, "").replace(/[0-9]/g, "")} = ${
+              enumValue.value
+            }`
+          );
+          textLiteralTypes.push(`"${enumValue.text}"`);
+          valueLiteralTypes.push(
+            `${enumName}.${enumValue.text
+              .replace(/\W/g, "")
+              .replace(/[0-9]/g, "")}`
+          );
+        }
+        outputTS += `
+const enum ${enumName}_enum {
+${enumTemplate.join(",\n")}
+      }
+`;
+        outputTS += `
+interface ${enumValues.attribute}_value extends Xrm.OptionSetValue {
+text: ${textLiteralTypes.join(" | ")};
+value: ${valueLiteralTypes.join(" | ")};
+      }
+`;
+        outputTS += `
+interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttribute {
+  getOptions(): ${enumValues.attribute}_value[];
+  getSelectedOption(): ${enumValues.attribute}_value | null;
+  getValue(): ${enumName}_enum | null;
+  setValue(value: ${enumName}_enum | null): void;
+      }
+  `;
+      }
+      outputTS += `interface ${quickViewName}_controls extends Xrm.Collection.ItemCollection {`
+      for(const [itemName, itemType] of Object.entries(quickView.controls)) {
+        outputTS += `get(itemName:"${itemName}"): ${itemType};\n`;
+      }
+      outputTS += `}`
+      outputTS += `
+  interface ${quickViewName}_attributes extends Xrm.Collection.ItemCollection {`;
+      for (const [itemName, itemType] of Object.entries(quickView.attributes)) {
+        outputTS += `get(itemName:"${itemName}"): ${itemType};\n`;
+      }
+      outputTS += `}`;
+  outputTS+= `
+  interface ${quickViewName}_quickformcontrol extends Xrm.Controls.QuickFormControl {
+    `
+    for (const [itemName, itemType] of Object.entries(quickView.controls)) {
+        outputTS += `getControl(controlName:"${itemName}"): ${itemType};\n`;
+      }
+    outputTS += `
+    getControl(): ${quickViewName}_controls
+    `
+    for (const [itemName, itemType] of Object.entries(quickView.attributes)) {
+        outputTS += `getAttribute(attributeName:"${itemName}"): ${itemType};\n`;
+      }
+    outputTS+=`
+    getAttribute(): ${quickViewName}_attributes;
+  
+  }`;
+    }
+    outputTS += `
 
 declare namespace Xrm {
 
-interface Entity {
-    attributes: Collection.ItemCollection<extendedAttributeTypes>;
+    interface Ui {
+    quickForms: Collection.ItemCollection<${
+      Object.keys(typeInfo.quickViews)
+        .map((quickViewName) => `${quickViewName}_quickformcontrol`)
+        .join(" | ")
+    }>
   }
 
-namespace Controls {
-    interface QuickFormControl {`;
-
-    for (const [quickViewControlName, quickViewControlType] of Object.entries(
-      typeInfo.quickViewControls
-    )) {
-      outputTS += `\ngetControl(controlName: "${quickViewControlName}"): ${quickViewControlType};\n`;
-    }
-
-    outputTS += `}
-  }
-  `;
+`;
     outputTS += `    namespace Collection {
         interface ItemCollection<T> {
 `;
     for (const [possibleTypeName, possibleTypesArray] of Object.entries(
-      typeInfo.possibleTypes
+      typeInfo.formPossibleTypes
     )) {
       let possibleTypeTemplate = "";
       for (const possibleType of possibleTypesArray) {
@@ -309,17 +476,17 @@ namespace Controls {
   interface FormContext {
 `;
     for (const [attributeName, attributeType] of Object.entries(
-      typeInfo.attributes
+      typeInfo.formAttributes
     )) {
       outputTS += `\ngetAttribute(attributeName: "${attributeName}"): ${attributeType};\n`;
     }
     for (const [controlName, controlType] of Object.entries(
-      typeInfo.controls
+      typeInfo.formControls
     )) {
       outputTS += `\ngetControl(controlName: "${controlName}"): ${controlType};\n`;
     }
     outputTS += `  }
-}
+  }
 `;
 
     // Create a new window with a textarea showing the output.

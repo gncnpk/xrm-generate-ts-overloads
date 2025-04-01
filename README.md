@@ -4,27 +4,29 @@ Automatically creates TypeScript type definitions compatible with [@types/xrm](h
 
 You can find the source code here: [xrm-generate-ts-overloads](https://github.com/gncnpk/xrm-generate-ts-overloads)
 
-## Generated Form-Specific Definitions
+## Features
 
-### Method Return Types
-* *.getAttribute()
-* *.getControl()
-* *.data.attributes.get()
-* *.controls.get()
-* *.sections.get()
-* *.ui.tabs.get()
+### Generated Form-Specific Definitions
 
-### Enums
+#### Method Return Types
+* [getAttribute()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/attributes)
+* [getControl()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/controls/getcontrol)
+* [data.attributes.get()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/attributes)
+* [controls.get()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/controls)
+* [sections.get()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/formcontext-ui-tab-sections)
+* [ui.tabs.get()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/formcontext-ui-tabs)
+
+#### Enums
 * OptionSet Options
 
-### Interfaces
-* OptionSet Attributes
-* OptionSet Values
+#### Interfaces
+* [OptionSet Attributes](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/attributes#choices-and-choice-column-types)
+* [OptionSet Values](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/attributes#choices-and-choice-column-types)
 
-### Subgrid
+#### Subgrid
 * Attributes
 
-### Quick Forms/Views
+#### Quick Forms/Views
 * Controls
 
 
