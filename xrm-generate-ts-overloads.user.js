@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Definitions
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.954
+// @version      1.964
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -104,7 +104,9 @@
       }
     }
 
-    const currentFormName = Xrm.Page.ui.formSelector.getCurrentItem().getLabel();
+    const currentFormName = Xrm.Page.ui.formSelector
+      .getCurrentItem()
+      .getLabel();
 
     // Loop through all controls on the form.
     if (
@@ -127,7 +129,7 @@
     // Loop through all tabs and sections on the form.
     if (typeof Xrm.Page.ui.tabs.get === "function") {
       Xrm.Page.ui.tabs.get().forEach((tab) => {
-        let formTab = typeInfo.formTabs[tab.getName()] = new Tab();
+        let formTab = (typeInfo.formTabs[tab.getName()] = new Tab());
         tab.sections.forEach((section) => {
           formTab.sections[section.getName()] = `${section.getName()}_section`;
         });
@@ -204,7 +206,9 @@
         const quickViewName = ctrl.getName();
         let quickView = (typeInfo.quickViews[quickViewName] = new QuickForm());
         const ctrlType = ctrl.getControlType();
-        typeInfo.formControls[quickViewName] = `${quickViewName}_quickformcontrol`;
+        typeInfo.formControls[
+          quickViewName
+        ] = `${quickViewName}_quickformcontrol`;
         ctrl.getControl().forEach((subCtrl) => {
           if (typeof subCtrl.getAttribute !== "function") {
             return;
@@ -281,6 +285,7 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
   getSelectedOption(): ${enumValues.attribute}_value | null;
   getValue(): ${enumName} | null;
   setValue(value: ${enumName} | null): void;
+  getText(): ${enumValues.attribute}_value['text'] | null;
 }
 `;
       extendedAttributeTypes.push(`${enumValues.attribute}_attribute`);
@@ -320,12 +325,17 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
   getSelectedOption(): ${enumValues.attribute}_value | null;
   getValue(): ${enumName}_enum | null;
   setValue(value: ${enumName}_enum | null): void;
+  getText(): ${enumValues.attribute}_value['text'] | null;
   }
   `;
       }
 
       outputTS += `
-  interface ${subgridName}_attributes extends Xrm.Collection.ItemCollection {`;
+  interface ${subgridName}_attributes extends Xrm.Collection.ItemCollection<${new Set(
+        Object.values(subgrid.attributes)
+      )
+        .map((attrType) => `${attrType}`)
+        .join(" | ")}> {`;
       for (const [itemName, itemType] of Object.entries(subgrid.attributes)) {
         outputTS += `get(itemName:"${itemName}"): ${itemType};\n`;
       }
@@ -352,15 +362,18 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
   interface ${subgridName}_gridcontrol extends Xrm.Controls.GridControl {
     getGrid(): ${subgridName}_grid;
   }
-  interface ${subgridName}_context extends Xrm.FormContext {`
-  for (const [itemName, itemType] of Object.entries(subgrid.attributes)) {
-    outputTS += `getAttribute(attributeName:"${itemName}"): ${itemType};\n`;
+  interface ${subgridName}_context extends Xrm.FormContext {`;
+      for (const [itemName, itemType] of Object.entries(subgrid.attributes)) {
+        outputTS += `getAttribute(attributeName:"${itemName}"): ${itemType};\n`;
+      }
+      outputTS += `getAttribute(delegateFunction?: Collection.MatchingDelegate<Xrm.Attributes.SpecificAttributeTypes>): ${subgridName}_attributes;`;
+      outputTS += `
   }
-  outputTS += `getAttribute(delegateFunction?: Collection.MatchingDelegate<Xrm.Attributes.SpecificAttributeTypes>): ${subgridName}_attributes;`;
-  outputTS += `
-  }
-  
-`;
+  `;
+      outputTS += `
+  interface ${subgridName}_eventcontext extends Xrm.Events.EventContext {
+    getFormContext(): ${subgridName}_context;
+}`;
     }
     for (const [quickViewName, quickView] of Object.entries(
       typeInfo.quickViews
@@ -399,71 +412,98 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
   getSelectedOption(): ${enumValues.attribute}_value | null;
   getValue(): ${enumName}_enum | null;
   setValue(value: ${enumName}_enum | null): void;
+  getText(): ${enumValues.attribute}_value['text'] | null;
       }
   `;
       }
-      outputTS += `interface ${quickViewName}_controls extends Xrm.Collection.ItemCollection {`
-      for(const [itemName, itemType] of Object.entries(quickView.controls)) {
+      outputTS += `interface ${quickViewName}_controls extends Xrm.Collection.ItemCollection<${new Set(
+        Object.values(quickView.controls)
+      )
+        .map((controlType) => `${controlType}`)
+        .join(" | ")}> {`;
+      for (const [itemName, itemType] of Object.entries(quickView.controls)) {
         outputTS += `get(itemName:"${itemName}"): ${itemType};\n`;
       }
-      outputTS += `}`
+      outputTS += `}`;
       outputTS += `
-  interface ${quickViewName}_attributes extends Xrm.Collection.ItemCollection {`;
+  interface ${quickViewName}_attributes extends Xrm.Collection.ItemCollection<${new Set(
+        Object.values(quickView.attributes)
+      )
+        .map((attrType) => `${attrType}`)
+        .join(" | ")}> {`;
       for (const [itemName, itemType] of Object.entries(quickView.attributes)) {
         outputTS += `get(itemName:"${itemName}"): ${itemType};\n`;
       }
       outputTS += `}`;
-  outputTS+= `
+      outputTS += `
   interface ${quickViewName}_quickformcontrol extends Xrm.Controls.QuickFormControl {
-    `
-    for (const [itemName, itemType] of Object.entries(quickView.controls)) {
+    `;
+      for (const [itemName, itemType] of Object.entries(quickView.controls)) {
         outputTS += `getControl(controlName:"${itemName}"): ${itemType};\n`;
       }
-    outputTS += `
+      outputTS += `
     getControl(): ${quickViewName}_controls
-    `
-    for (const [itemName, itemType] of Object.entries(quickView.attributes)) {
+    `;
+      for (const [itemName, itemType] of Object.entries(quickView.attributes)) {
         outputTS += `getAttribute(attributeName:"${itemName}"): ${itemType};\n`;
       }
-    outputTS+=`
+      outputTS += `
     getAttribute(): ${quickViewName}_attributes;
   
   }`;
     }
     for (const [tabName, tab] of Object.entries(typeInfo.formTabs)) {
       outputTS += `
-interface ${tabName}_sections extends Xrm.Collection.ItemCollection {`;      
+interface ${tabName}_sections extends Xrm.Collection.ItemCollection<Xrm.Controls.Section> {`;
       for (const [sectionName, section] of Object.entries(tab.sections)) {
         outputTS += `get(itemName:"${sectionName}"): Xrm.Controls.Section;\n`;
       }
-        outputTS += `}`;
-      
+      outputTS += `}`;
+
       outputTS += `
 interface ${tabName}_tab extends Xrm.Controls.Tab {
   sections: ${tabName}_sections;
-    }`
+    }`;
     }
     outputTS += `
-interface ${currentFormName}_tabs extends Xrm.Collection.ItemCollection {`;
+interface ${currentFormName}_tabs extends Xrm.Collection.ItemCollection<${new Set(
+      Object.keys(typeInfo.formTabs)
+    )
+      .map((tabName) => `${tabName}_tab`)
+      .join(" | ")}> {`;
     for (const [itemName, itemType] of Object.entries(typeInfo.formTabs)) {
       outputTS += `get(itemName:"${itemName}"): ${itemName}_tab;\n`;
     }
     outputTS += `}`;
     outputTS += `
-interface ${currentFormName}_quickforms extends Xrm.Collection.ItemCollection {`;
+interface ${currentFormName}_quickforms extends Xrm.Collection.ItemCollection<${new Set(
+      Object.keys(typeInfo.quickViews)
+    )
+      .map((quickViewName) => `${quickViewName}_quickformcontrol`)
+      .join(" | ")}> {`;
     for (const [itemName, itemType] of Object.entries(typeInfo.quickViews)) {
       outputTS += `get(itemName:"${itemName}"): ${itemName}_quickformcontrol;\n`;
     }
     outputTS += `}`;
     outputTS += `
-    interface ${currentFormName}_attributes extends Xrm.Collection.ItemCollection {`;
-    for (const [itemName, itemType] of Object.entries(typeInfo.formAttributes)) {
+    interface ${currentFormName}_attributes extends Xrm.Collection.ItemCollection<${new Set(
+      Object.values(typeInfo.formAttributes)
+    )
+      .map((attrType) => `${attrType}`)
+      .join(" | ")}>  {`;
+    for (const [itemName, itemType] of Object.entries(
+      typeInfo.formAttributes
+    )) {
       outputTS += `get(itemName:"${itemName}"): ${itemType};\n`;
     }
-    
+
     outputTS += `}`;
     outputTS += `
-    interface ${currentFormName}_controls extends Xrm.Collection.ItemCollection {`;
+    interface ${currentFormName}_controls extends Xrm.Collection.ItemCollection<${new Set(
+      Object.values(typeInfo.formControls)
+    )
+      .map((ctrlType) => `${ctrlType}`)
+      .join(" | ")}> {`;
     for (const [itemName, itemType] of Object.entries(typeInfo.formControls)) {
       outputTS += `get(itemName:"${itemName}"): ${itemType};\n`;
     }
@@ -474,68 +514,29 @@ interface ${currentFormName}_quickforms extends Xrm.Collection.ItemCollection {`
       tabs: ${currentFormName}_tabs;
 
     }
-    `
-    outputTS+= `
+    `;
+    outputTS += `
     interface ${currentFormName}_context extends Xrm.FormContext {
     ui: ${currentFormName}_ui;
-  `
+  `;
     for (const [itemName, itemType] of Object.entries(typeInfo.formControls)) {
       outputTS += `getControl(controlName:"${itemName}"): ${itemType};\n`;
     }
-    for (const [itemName, itemType] of Object.entries(typeInfo.formAttributes)) {
+    for (const [itemName, itemType] of Object.entries(
+      typeInfo.formAttributes
+    )) {
       outputTS += `getAttribute(attributeName:"${itemName}"): ${itemType};\n`;
     }
-  outputTS += `
+    outputTS += `
     getAttribute(attributeName: string): Xrm.Attributes.Attribute | null;
     getControl(controlName: string): Xrm.Controls.Control | null;
     getAttribute(delegateFunction?: Collection.MatchingDelegate<Xrm.Attributes.SpecificAttributeTypes>): ${currentFormName}_attributes;
     getControl(delegateFunction?: Collection.MatchingDelegate<Xrm.Controls.SpecificControls>): ${currentFormName}_controls;
   }`;
-
-//    outputTS += `
-//
-//declare namespace Xrm {
-//
-//    interface Ui {
-//    quickForms: Collection.ItemCollection<${
-//      Object.keys(typeInfo.quickViews)
-//        .map((quickViewName) => `${quickViewName}_quickformcontrol`)
-//        .join(" | ")
-//    }>
-//  }
-//
-//`;
-//    outputTS += `    namespace Collection {
-//        interface ItemCollection<T> {
-//`;
-//    for (const [possibleTypeName, possibleTypesArray] of Object.entries(
-//      typeInfo.formPossibleTypes
-//    )) {
-//      let possibleTypeTemplate = "";
-//      for (const possibleType of possibleTypesArray) {
-//        possibleTypeTemplate += ` TSubType extends ${possibleType} ? ${possibleType} :`;
-//      }
-//      outputTS += `\nget<TSubType extends T>(itemName: "${possibleTypeName}"):${possibleTypeTemplate} never;\n`;
-//    }
-//    outputTS += `
-//    }
-//}`;
-//    outputTS += `
-//  interface FormContext {
-//`;
-//    for (const [attributeName, attributeType] of Object.entries(
-//      typeInfo.formAttributes
-//    )) {
-//      outputTS += `\ngetAttribute(attributeName: "${attributeName}"): ${attributeType};\n`;
-//    }
-//    for (const [controlName, controlType] of Object.entries(
-//      typeInfo.formControls
-//    )) {
-//      outputTS += `\ngetControl(controlName: "${controlName}"): ${controlType};\n`;
-//    }
-//    outputTS += `  }
-//  }
-//`;
+    outputTS += `
+  interface ${currentFormName}_eventcontext extends Xrm.Events.EventContext {
+    getFormContext(): ${currentFormName}_context;
+}`;
 
     // Create a new window with a textarea showing the output.
     // The textarea is set to readonly to prevent editing.
