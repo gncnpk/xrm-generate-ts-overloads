@@ -29,13 +29,19 @@ You can find the source code repository here: [xrm-generate-ts-overloads](https:
 * [formContext](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/clientapi-form-context)
 * [executionContext](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/clientapi-execution-context)
 
-#### Method Return Types
+#### Method Parameter/Return Types
 * [getAttribute()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/attributes)
 * [getControl()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/controls/getcontrol)
 * [attributes.get()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/attributes)
 * [controls.get()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/controls)
 * [sections.get()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/formcontext-ui-tab-sections)
 * [tabs.get()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/formcontext-ui-tabs)
+* [getOption()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/attributes#choices-and-choice-column-types)
+* [getOptions()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/attributes#choices-and-choice-column-types)
+* [getSelectedOption()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/attributes#choices-and-choice-column-types)
+* [getValue()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/attributes)
+* [getText()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/attributes#choices-and-choice-column-types)
+* [setValue()](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/attributes)
 
 #### Enums
 * OptionSet Options
