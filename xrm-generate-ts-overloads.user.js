@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Definitions
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.986
+// @version      1.987
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -530,11 +530,13 @@ interface ${currentFormName}_quickforms extends Xrm.Collection.ItemCollection<${
       Object.keys(typeInfo.quickViews)
     )
       .map((quickViewName) => `${quickViewName}_quickformcontrol`)
-      .join(" | ")}> {`;
+      .join(" | ")}${Object.keys(typeInfo.quickViews).length === 0 ? "Xrm.Controls.QuickFormControl" : ""}> {`;
     for (const [itemName, itemType] of Object.entries(typeInfo.quickViews)) {
       outputTS += `get(itemName:"${itemName}"): ${itemName}_quickformcontrol;\n`;
     }
-    outputTS += `}`;
+    outputTS += `
+    get(itemNameOrIndex: string | number): Xrm.Controls.QuickFormControl | null;
+    }`;
     outputTS += `
     type ${currentFormName}_attributes_types = ${new Set(
       Object.values(typeInfo.formAttributes)
