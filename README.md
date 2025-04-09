@@ -57,4 +57,10 @@ You can find the source code repository here: [xrm-generate-ts-overloads](https:
 * Attributes
 * [Controls](https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/clientapi/reference/formcontext-ui-quickforms)
 
+#### Literals
+* Attributes
+* Controls
+* Quick View Attributes
+* Quick View Controls
+
 

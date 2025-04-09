@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Definitions
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.974
+// @version      1.984
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -12,9 +12,15 @@
 (function () {
   "use strict";
 
-  const generateComments = function (fieldName, fieldValue) {
-    return `\n/** ${fieldName}: ${fieldValue} */`;
-  };
+  const groupItemsByType = (items) => {
+    return Object.entries(items).reduce((acc, [itemName, itemType]) => {
+        if (!acc[itemType]) {
+            acc[itemType] = [];
+        }
+        acc[itemType].push(itemName);
+        return acc;
+    }, {});
+};
   // Create a button element and style it to be fixed in the bottom-right corner.
   const btn = document.createElement("button");
   btn.textContent = "Generate TypeScript Definitions";
@@ -78,11 +84,11 @@
       quickViews: {},
       formAttributes: {},
       formControls: {},
-      formPossibleTypes: {},
+      possibleEnums: [],
       formTabs: {},
       formEnums: {},
       quickViewControls: {},
-      quickViewAttributes: {},
+      quickViewAttributes: {}
     };
     class Subgrid {
       constructor() {
@@ -145,7 +151,9 @@
         const mappedControlType = specificControlTypeMapping[attrType];
         if (mappedType) {
           typeInfo.formAttributes[attrName] = mappedType;
-          typeInfo.formControls[attrName] = mappedControlType;
+          attr.controls.forEach((ctrl) => {
+            typeInfo.formControls[ctrl.getName()] = mappedControlType;
+          });
         }
         if (
           attr.getAttributeType() === "optionset" &&
@@ -246,6 +254,10 @@
     for (const [originalEnumName, enumValues] of Object.entries(
       typeInfo.formEnums
     )) {
+      if (typeInfo.possibleEnums.includes(originalEnumName)) {
+        continue;
+      }
+      typeInfo.possibleEnums.push(originalEnumName);
       let enumName = `${originalEnumName}_enum`;
       let enumTemplate = [];
       let textLiteralTypes = [];
@@ -275,7 +287,7 @@ value: ${valueLiteralTypes.join(" | ")};
 }
 `;
       outputTS += `
-interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttribute {
+interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttribute<${enumName}> {
    `
       valueLiteralTypes.forEach((value, index) => { 
         outputTS+= `getOption(value: ${value}): {text: ${textLiteralTypes[index]}, value: ${value}};\n`;
@@ -291,6 +303,10 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
     }
     for (const [subgridName, subgrid] of Object.entries(typeInfo.subGrids)) {
       for (const [enumName, enumValues] of Object.entries(subgrid.enums)) {
+        if (typeInfo.possibleEnums.includes(enumName)) {
+          continue;
+        }
+        typeInfo.possibleEnums.push(enumName);
         let enumTemplate = [];
         let textLiteralTypes = [];
         let valueLiteralTypes = [];
@@ -319,7 +335,7 @@ value: ${valueLiteralTypes.join(" | ")};
   }
 `;
         outputTS += `
-interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttribute {
+interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttribute<${enumName}_enum> {
 `
       valueLiteralTypes.forEach((value, index) => { 
         outputTS+= `getOption(value: ${value}): {text: ${textLiteralTypes[index]}, value: ${value}};\n`;
@@ -341,9 +357,11 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
       )
         .map((attrType) => `${attrType}`)
         .join(" | ")}> {`;
-      for (const [itemName, itemType] of Object.entries(subgrid.attributes)) {
-        outputTS += `get(itemName:"${itemName}"): ${itemType};\n`;
-      }
+        for (const [attrType, attrNames] of Object.entries(
+          groupItemsByType(subgrid.attributes)
+        )) {
+          outputTS += `get(itemName: "${attrNames.join("\" | \"")}"): ${attrType};\n`;
+        }
       outputTS += `}
   `;
 
@@ -368,10 +386,13 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
     getGrid(): ${subgridName}_grid;
   }
   interface ${subgridName}_context extends Xrm.FormContext {`;
-      for (const [itemName, itemType] of Object.entries(subgrid.attributes)) {
-        outputTS += `getAttribute(attributeName:"${itemName}"): ${itemType};\n`;
-      }
-      outputTS += `getAttribute(delegateFunction?): ${subgridName}_attributes;`;
+  for (const [attrType, attrNames] of Object.entries(
+    groupItemsByType(subgrid.attributes)
+  )) {
+    outputTS += `getAttribute(attributeName: "${attrNames.join("\" | \"")}"): ${attrType};\n`;
+  }
+    outputTS += `getAttribute(attributeNameOrIndex: string | number): ${subgridName}_attributes | null;`
+      outputTS += `getAttribute(delegateFunction?): ${subgridName}_attributes[];`;
       outputTS += `
   }
   `;
@@ -384,6 +405,10 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
       typeInfo.quickViews
     )) {
       for (const [enumName, enumValues] of Object.entries(quickView.enums)) {
+        if (typeInfo.possibleEnums.includes(enumName)) {
+          continue;
+        }
+        typeInfo.possibleEnums.push(enumName);
         let enumTemplate = [];
         let textLiteralTypes = [];
         let valueLiteralTypes = [];
@@ -412,7 +437,7 @@ value: ${valueLiteralTypes.join(" | ")};
       }
 `;
         outputTS += `
-interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttribute {
+interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttribute<${enumName}_enum> {
 `
       valueLiteralTypes.forEach((value, index) => { 
         outputTS+= `getOption(value: ${value}): {text: ${textLiteralTypes[index]}, value: ${value}};\n`;
@@ -427,42 +452,57 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
       }
   `;
       }
-      outputTS += `type ${quickViewName}_controls = ${new Set(
+      outputTS += `type ${quickViewName}_controls_types = ${new Set(
         Object.values(quickView.controls)
       )
         .map((controlType) => `${controlType}`)
-        .join(" | ")}`;
+        .join(" | ")}\n`;
       outputTS += `
-  type ${quickViewName}_attributes = ${new Set(
+  type ${quickViewName}_attributes_types = ${new Set(
         Object.values(quickView.attributes)
       )
         .map((attrType) => `${attrType}`)
-        .join(" | ")}`;
+        .join(" | ")}\n`;
+        outputTS += `type ${quickViewName}_controls_literals = ${new Set(
+          Object.keys(quickView.controls)
+        )
+          .map((controlName) => `"${controlName}"`)
+          .join(" | ")}\n`;
+        outputTS += `
+    type ${quickViewName}_attributes_literals = ${new Set(
+          Object.keys(quickView.attributes)
+        )
+          .map((attrName) => `"${attrName}"`)
+          .join(" | ")}\n`;
+  
       outputTS += `
   interface ${quickViewName}_quickformcontrol extends Xrm.Controls.QuickFormControl {
     `;
-      for (const [itemName, itemType] of Object.entries(quickView.controls)) {
-        outputTS += `getControl(controlName:"${itemName}"): ${itemType};\n`;
+      for (const [controlType, controlNames] of Object.entries(
+        groupItemsByType(quickView.controls)
+      )) {
+        outputTS += `getControl(controlName: "${controlNames.join("\" | \"")}"): ${controlType};\n`;
       }
       outputTS += `
-    getControl(): ${quickViewName}_controls[]
-    getControl(controlName: string): ${quickViewName}_controls | null;
+    getControl(): ${quickViewName}_controls_types[]
+    getControl(controlNameOrIndex: string | number): ${quickViewName}_controls_types | null;
     `;
-      for (const [itemName, itemType] of Object.entries(quickView.attributes)) {
-        outputTS += `getAttribute(attributeName:"${itemName}"): ${itemType};\n`;
-      }
+    for (const [attrType, attrNames] of Object.entries(
+      groupItemsByType(quickView.attributes)
+    )) {
+      outputTS += `getAttribute(attributeName: "${attrNames.join("\" | \"")}"): ${attrType};\n`;
+    }
       outputTS += `
-      getAttribute(attributeName: string): ${quickViewName}_attributes | null;
-    getAttribute(): ${quickViewName}_attributes[];
+      getAttribute(attributeNameOrIndex: string | number): ${quickViewName}_attributes_types | null;
+    getAttribute(): ${quickViewName}_attributes_types[];
   
   }`;
     }
     for (const [tabName, tab] of Object.entries(typeInfo.formTabs)) {
       outputTS += `
 interface ${tabName}_sections extends Xrm.Collection.ItemCollection<Xrm.Controls.Section> {`;
-      for (const [sectionName, section] of Object.entries(tab.sections)) {
-        outputTS += `get(itemName:"${sectionName}"): Xrm.Controls.Section;\n`;
-      }
+        outputTS += `get(itemName:"${Object.keys(tab.sections).join("\" | \"")}"): Xrm.Controls.Section;\n`;
+      
       outputTS += `}`;
 
       outputTS += `
@@ -491,17 +531,30 @@ interface ${currentFormName}_quickforms extends Xrm.Collection.ItemCollection<${
     }
     outputTS += `}`;
     outputTS += `
-    type ${currentFormName}_attributes = ${new Set(
+    type ${currentFormName}_attributes_types = ${new Set(
       Object.values(typeInfo.formAttributes)
     )
       .map((attrType) => `${attrType}`)
-      .join(" | ")}`;
+      .join(" | ")}\n`;
     outputTS += `
-    type ${currentFormName}_controls = ${new Set(
+    type ${currentFormName}_attributes_literals = ${new Set(
+      Object.keys(typeInfo.formAttributes)
+    )
+      .map((attrName) => `"${attrName}"`)
+      .join(" | ")}\n`;
+      
+    outputTS += `
+    type ${currentFormName}_controls_types = ${new Set(
       Object.values(typeInfo.formControls)
     )
       .map((ctrlType) => `${ctrlType}`)
-      .join(" | ")}`
+      .join(" | ")}\n`
+    outputTS += `
+    type ${currentFormName}_controls_literals = ${new Set(
+      Object.keys(typeInfo.formControls)
+    )
+      .map((ctrlName) => `"${ctrlName}"`)
+      .join(" | ")}\n`;
     outputTS += `
     interface ${currentFormName}_ui extends Xrm.Ui {
       quickForms: ${currentFormName}_quickforms | null;
@@ -513,19 +566,23 @@ interface ${currentFormName}_quickforms extends Xrm.Collection.ItemCollection<${
     interface ${currentFormName}_context extends Xrm.FormContext {
     ui: ${currentFormName}_ui;
   `;
-    for (const [itemName, itemType] of Object.entries(typeInfo.formControls)) {
-      outputTS += `getControl(controlName:"${itemName}"): ${itemType};\n`;
-    }
-    for (const [itemName, itemType] of Object.entries(
-      typeInfo.formAttributes
+  for (const [controlType, controlNames] of Object.entries(
+    groupItemsByType(typeInfo.formControls)
+  )) {
+    outputTS += `getControl(controlName: "${controlNames.join("\" | \"")}"): ${controlType};\n`;
+  }
+    outputTS += `
+    getControl(controlNameOrIndex: string | number): ${currentFormName}_controls_types | null;
+    getControl(delegateFunction?): ${currentFormName}_controls_types[];
+    `
+    for (const [attrType, attrNames] of Object.entries(
+      groupItemsByType(typeInfo.formAttributes)
     )) {
-      outputTS += `getAttribute(attributeName:"${itemName}"): ${itemType};\n`;
+      outputTS += `getAttribute(attributeName: "${attrNames.join("\" | \"")}"): ${attrType};\n`;
     }
     outputTS += `
-    getAttribute(attributeName: string): ${currentFormName}_attributes | null;
-    getControl(controlName: string): ${currentFormName}_controls | null;
-    getAttribute(delegateFunction?): ${currentFormName}_attributes[];
-    getControl(delegateFunction?): ${currentFormName}_controls[];
+    getAttribute(attributeNameOrIndex: string | number): ${currentFormName}_attributes_types | null;
+    getAttribute(delegateFunction?): ${currentFormName}_attributes_types[];
   }`;
     outputTS += `
   interface ${currentFormName}_eventcontext extends Xrm.Events.EventContext {
