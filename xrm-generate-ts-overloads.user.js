@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Definitions
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.985
+// @version      1.986
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -366,7 +366,9 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
         )) {
           outputTS += `get(itemName: "${attrNames.join("\" | \"")}"): ${attrType};\n`;
         }
-      outputTS += `}
+      outputTS += `
+      get(itemNameOrIndex: string | number): Xrm.Attributes.Attribute | null;
+      }
   `;
 
       outputTS += `
@@ -460,13 +462,13 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
         Object.values(quickView.controls)
       )
         .map((controlType) => `${controlType}`)
-        .join(" | ")}${Object.keys(quickView.controls).length === 0 ? "\"Xrm.Controls.Control\"" : ""};\n`;
+        .join(" | ")}${Object.keys(quickView.controls).length === 0 ? "Xrm.Controls.Control" : ""};\n`;
       outputTS += `
   type ${quickViewName}_attributes_types = ${new Set(
         Object.values(quickView.attributes)
       )
         .map((attrType) => `${attrType}`)
-        .join(" | ")}${Object.keys(quickView.attributes).length === 0 ? "\"Xrm.Attributes.Attribute\"" : ""};\n`;
+        .join(" | ")}${Object.keys(quickView.attributes).length === 0 ? "Xrm.Attributes.Attribute" : ""};\n`;
         outputTS += `type ${quickViewName}_controls_literals = ${new Set(
           Object.keys(quickView.controls)
         )
