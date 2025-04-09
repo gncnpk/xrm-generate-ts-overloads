@@ -2,7 +2,7 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Definitions
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.984
+// @version      1.985
 // @license      GPL-3.0
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
@@ -21,6 +21,9 @@
         return acc;
     }, {});
 };
+  const stripNonAlphaNumeric = (str) => {
+    return str.replace(/\W/g, "");
+  };
   // Create a button element and style it to be fixed in the bottom-right corner.
   const btn = document.createElement("button");
   btn.textContent = "Generate TypeScript Definitions";
@@ -110,9 +113,9 @@
       }
     }
 
-    const currentFormName = Xrm.Page.ui.formSelector
+    const currentFormName = stripNonAlphaNumeric(Xrm.Page.ui.formSelector
       .getCurrentItem()
-      .getLabel();
+      .getLabel());
 
     // Loop through all controls on the form.
     if (
@@ -135,9 +138,9 @@
     // Loop through all tabs and sections on the form.
     if (typeof Xrm.Page.ui.tabs.get === "function") {
       Xrm.Page.ui.tabs.get().forEach((tab) => {
-        let formTab = (typeInfo.formTabs[tab.getName()] = new Tab());
+        let formTab = (typeInfo.formTabs[stripNonAlphaNumeric(tab.getName())] = new Tab());
         tab.sections.forEach((section) => {
-          formTab.sections[section.getName()] = `${section.getName()}_section`;
+          formTab.sections[stripNonAlphaNumeric(section.getName())] = `${stripNonAlphaNumeric(section.getName())}_section`;
         });
       });
     }
@@ -301,7 +304,8 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
 }
 `;
     }
-    for (const [subgridName, subgrid] of Object.entries(typeInfo.subGrids)) {
+    for (let [subgridName, subgrid] of Object.entries(typeInfo.subGrids)) {
+      subgridName = subgridName.replace(/\W/g, "");
       for (const [enumName, enumValues] of Object.entries(subgrid.enums)) {
         if (typeInfo.possibleEnums.includes(enumName)) {
           continue;
@@ -356,7 +360,7 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
         Object.values(subgrid.attributes)
       )
         .map((attrType) => `${attrType}`)
-        .join(" | ")}> {`;
+        .join(" | ")}${Object.keys(subgrid.attributes).length === 0 ? "Xrm.Attributes.Attribute" : ""}> {`;
         for (const [attrType, attrNames] of Object.entries(
           groupItemsByType(subgrid.attributes)
         )) {
@@ -456,25 +460,24 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
         Object.values(quickView.controls)
       )
         .map((controlType) => `${controlType}`)
-        .join(" | ")}\n`;
+        .join(" | ")}${Object.keys(quickView.controls).length === 0 ? "\"Xrm.Controls.Control\"" : ""};\n`;
       outputTS += `
   type ${quickViewName}_attributes_types = ${new Set(
         Object.values(quickView.attributes)
       )
         .map((attrType) => `${attrType}`)
-        .join(" | ")}\n`;
+        .join(" | ")}${Object.keys(quickView.attributes).length === 0 ? "\"Xrm.Attributes.Attribute\"" : ""};\n`;
         outputTS += `type ${quickViewName}_controls_literals = ${new Set(
           Object.keys(quickView.controls)
         )
           .map((controlName) => `"${controlName}"`)
-          .join(" | ")}\n`;
+          .join(" | ")}${Object.keys(quickView.controls).length === 0 ? "\"\"" : ""};\n`;
         outputTS += `
     type ${quickViewName}_attributes_literals = ${new Set(
           Object.keys(quickView.attributes)
         )
           .map((attrName) => `"${attrName}"`)
-          .join(" | ")}\n`;
-  
+          .join(" | ")}${Object.keys(quickView.attributes).length === 0 ? "\"\"" : ""};\n`;
       outputTS += `
   interface ${quickViewName}_quickformcontrol extends Xrm.Controls.QuickFormControl {
     `;
