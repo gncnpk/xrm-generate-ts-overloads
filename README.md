@@ -16,7 +16,7 @@ You can find the source code repository here: [xrm-generate-ts-overloads](https:
 4. Create a d.ts file in your project folder.
 5. Copy the generated TypeScript defintiions to your d.ts file.
 
-**Definitions for subgrids & quick views are generated only if the subgrid/quick view is loaded on the form.**
+**Definitions for subgrids/quick views/embedded forms are generated only if it has been loaded on the form.**
 
 **Subgrids must have atleast one row of data for definitions to be generated.**
 
