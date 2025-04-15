@@ -66,4 +66,10 @@ You can find the source code repository here: [xrm-generate-ts-overloads](https:
 * Quick View Attributes
 * Quick View Controls
 
+#### Embedded Forms
+* Attributes
+* Controls
+* Quick Views
+* Subgrids
+
 
