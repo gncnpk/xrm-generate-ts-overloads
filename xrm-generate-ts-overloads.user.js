@@ -2,8 +2,8 @@
 // @name         Microsoft Power Platform/Dynamics 365 CE - Generate TypeScript Definitions
 // @namespace    https://github.com/gncnpk/xrm-generate-ts-overloads
 // @author       Gavin Canon-Phratsachack (https://github.com/gncnpk)
-// @version      1.987
-// @license      GPL-3.0
+// @version      1.988
+// @license      MIT
 // @description  Automatically creates TypeScript type definitions compatible with @types/xrm by extracting form attributes and controls from Dynamics 365/Power Platform model-driven applications.
 // @match        https://*.dynamics.com/main.aspx?appid=*&pagetype=entityrecord&etn=*&id=*
 // @grant        none
@@ -14,13 +14,13 @@
 
   const groupItemsByType = (items) => {
     return Object.entries(items).reduce((acc, [itemName, itemType]) => {
-        if (!acc[itemType]) {
-            acc[itemType] = [];
-        }
-        acc[itemType].push(itemName);
-        return acc;
+      if (!acc[itemType]) {
+        acc[itemType] = [];
+      }
+      acc[itemType].push(itemName);
+      return acc;
     }, {});
-};
+  };
   const stripNonAlphaNumeric = (str) => {
     return str.replace(/\W/g, "");
   };
@@ -91,7 +91,7 @@
       formTabs: {},
       formEnums: {},
       quickViewControls: {},
-      quickViewAttributes: {}
+      quickViewAttributes: {},
     };
     class Subgrid {
       constructor() {
@@ -113,9 +113,9 @@
       }
     }
 
-    const currentFormName = stripNonAlphaNumeric(Xrm.Page.ui.formSelector
-      .getCurrentItem()
-      .getLabel());
+    const currentFormName = stripNonAlphaNumeric(
+      Xrm.Page.ui.formSelector.getCurrentItem().getLabel()
+    );
 
     // Loop through all controls on the form.
     if (
@@ -138,9 +138,12 @@
     // Loop through all tabs and sections on the form.
     if (typeof Xrm.Page.ui.tabs.get === "function") {
       Xrm.Page.ui.tabs.get().forEach((tab) => {
-        let formTab = (typeInfo.formTabs[stripNonAlphaNumeric(tab.getName())] = new Tab());
+        let formTab = (typeInfo.formTabs[stripNonAlphaNumeric(tab.getName())] =
+          new Tab());
         tab.sections.forEach((section) => {
-          formTab.sections[stripNonAlphaNumeric(section.getName())] = `${stripNonAlphaNumeric(section.getName())}_section`;
+          formTab.sections[
+            stripNonAlphaNumeric(section.getName())
+          ] = `${stripNonAlphaNumeric(section.getName())}_section`;
         });
       });
     }
@@ -291,11 +294,11 @@ value: ${valueLiteralTypes.join(" | ")};
 `;
       outputTS += `
 interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttribute<${enumName}> {
-   `
-      valueLiteralTypes.forEach((value, index) => { 
-        outputTS+= `getOption(value: ${value}): {text: ${textLiteralTypes[index]}, value: ${value}};\n`;
-      })
-  outputTS+=`getOption(value: ${enumValues.attribute}_value['value']): ${enumValues.attribute}_value | null;
+   `;
+      valueLiteralTypes.forEach((value, index) => {
+        outputTS += `getOption(value: ${value}): {text: ${textLiteralTypes[index]}, value: ${value}};\n`;
+      });
+      outputTS += `getOption(value: ${enumValues.attribute}_value['value']): ${enumValues.attribute}_value | null;
   getOptions(): ${enumValues.attribute}_value[];
   getSelectedOption(): ${enumValues.attribute}_value | null;
   getValue(): ${enumName} | null;
@@ -340,11 +343,11 @@ value: ${valueLiteralTypes.join(" | ")};
 `;
         outputTS += `
 interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttribute<${enumName}_enum> {
-`
-      valueLiteralTypes.forEach((value, index) => { 
-        outputTS+= `getOption(value: ${value}): {text: ${textLiteralTypes[index]}, value: ${value}};\n`;
-      })
-  outputTS+=`
+`;
+        valueLiteralTypes.forEach((value, index) => {
+          outputTS += `getOption(value: ${value}): {text: ${textLiteralTypes[index]}, value: ${value}};\n`;
+        });
+        outputTS += `
   getOption(value: ${enumValues.attribute}_value['value']): ${enumValues.attribute}_value | null;
   getOptions(): ${enumValues.attribute}_value[];
   getSelectedOption(): ${enumValues.attribute}_value | null;
@@ -356,23 +359,41 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
       }
 
       outputTS += `
-  interface ${subgridName}_attributes extends Xrm.Collection.ItemCollection<${new Set(
+  interface ${subgridName}_attributes extends Xrm.Collection.ItemCollection<${subgridName}_attributes_types> {`;
+      for (const [attrType, attrNames] of Object.entries(
+        groupItemsByType(subgrid.attributes)
+      )) {
+        outputTS += `get(itemName: "${attrNames.join(
+          '" | "'
+        )}"): ${attrType};\n`;
+      }
+      outputTS += `
+      get(itemName: ${subgridName}_attributes_literals): ${subgridName}_attributes_types;
+      get(itemNameOrIndex: string | number): Xrm.Attributes.Attribute | null;
+      get(delegate?): ${subgridName}_attributes_types[];
+      }
+  `;
+      outputTS += `
+  type ${subgridName}_attributes_types = ${new Set(
         Object.values(subgrid.attributes)
       )
         .map((attrType) => `${attrType}`)
-        .join(" | ")}${Object.keys(subgrid.attributes).length === 0 ? "Xrm.Attributes.Attribute" : ""}> {`;
-        for (const [attrType, attrNames] of Object.entries(
-          groupItemsByType(subgrid.attributes)
-        )) {
-          outputTS += `get(itemName: "${attrNames.join("\" | \"")}"): ${attrType};\n`;
-        }
-      outputTS += `
-      get(itemNameOrIndex: string | number): Xrm.Attributes.Attribute | null;
-      }
-  `;
+        .join(" | ")}${
+        Object.keys(subgrid.attributes).length === 0
+          ? "Xrm.Attributes.Attribute"
+          : ""
+      };\n`;
 
       outputTS += `
+  type ${subgridName}_attributes_literals = ${new Set(
+        Object.keys(subgrid.attributes)
+      )
+        .map((attrName) => `"${attrName}"`)
+        .join(" | ")}${
+        Object.keys(subgrid.attributes).length === 0 ? '""' : ""
+      };\n`;
 
+      outputTS += `
   interface ${subgridName}_entity extends Xrm.Entity {
     attributes: ${subgridName}_attributes;
   }
@@ -392,12 +413,15 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
     getGrid(): ${subgridName}_grid;
   }
   interface ${subgridName}_context extends Xrm.FormContext {`;
-  for (const [attrType, attrNames] of Object.entries(
-    groupItemsByType(subgrid.attributes)
-  )) {
-    outputTS += `getAttribute(attributeName: "${attrNames.join("\" | \"")}"): ${attrType};\n`;
-  }
-    outputTS += `getAttribute(attributeNameOrIndex: string | number): ${subgridName}_attributes | null;`
+      for (const [attrType, attrNames] of Object.entries(
+        groupItemsByType(subgrid.attributes)
+      )) {
+        outputTS += `getAttribute(attributeName: "${attrNames.join(
+          '" | "'
+        )}"): ${attrType};\n`;
+      }
+      outputTS += `getAttribute(attributeName: ${subgridName}_attributes_literals): ${subgridName}_attributes_types;`;
+      outputTS += `getAttribute(attributeNameOrIndex: string | number): Xrm.Attributes.Attribute | null;`;
       outputTS += `getAttribute(delegateFunction?): ${subgridName}_attributes[];`;
       outputTS += `
   }
@@ -444,11 +468,11 @@ value: ${valueLiteralTypes.join(" | ")};
 `;
         outputTS += `
 interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttribute<${enumName}_enum> {
-`
-      valueLiteralTypes.forEach((value, index) => { 
-        outputTS+= `getOption(value: ${value}): {text: ${textLiteralTypes[index]}, value: ${value}};\n`;
-      })
-  outputTS+=`
+`;
+        valueLiteralTypes.forEach((value, index) => {
+          outputTS += `getOption(value: ${value}): {text: ${textLiteralTypes[index]}, value: ${value}};\n`;
+        });
+        outputTS += `
   getOption(value: ${enumValues.attribute}_value['value']): ${enumValues.attribute}_value | null;
   getOptions(): ${enumValues.attribute}_value[];
   getSelectedOption(): ${enumValues.attribute}_value | null;
@@ -462,52 +486,75 @@ interface ${enumValues.attribute}_attribute extends Xrm.Attributes.OptionSetAttr
         Object.values(quickView.controls)
       )
         .map((controlType) => `${controlType}`)
-        .join(" | ")}${Object.keys(quickView.controls).length === 0 ? "Xrm.Controls.Control" : ""};\n`;
+        .join(" | ")}${
+        Object.keys(quickView.controls).length === 0
+          ? "Xrm.Controls.Control"
+          : ""
+      };\n`;
       outputTS += `
   type ${quickViewName}_attributes_types = ${new Set(
         Object.values(quickView.attributes)
       )
         .map((attrType) => `${attrType}`)
-        .join(" | ")}${Object.keys(quickView.attributes).length === 0 ? "Xrm.Attributes.Attribute" : ""};\n`;
-        outputTS += `type ${quickViewName}_controls_literals = ${new Set(
-          Object.keys(quickView.controls)
-        )
-          .map((controlName) => `"${controlName}"`)
-          .join(" | ")}${Object.keys(quickView.controls).length === 0 ? "\"\"" : ""};\n`;
-        outputTS += `
+        .join(" | ")}${
+        Object.keys(quickView.attributes).length === 0
+          ? "Xrm.Attributes.Attribute"
+          : ""
+      };\n`;
+      outputTS += `type ${quickViewName}_controls_literals = ${new Set(
+        Object.keys(quickView.controls)
+      )
+        .map((controlName) => `"${controlName}"`)
+        .join(" | ")}${
+        Object.keys(quickView.controls).length === 0 ? '""' : ""
+      };\n`;
+      outputTS += `
     type ${quickViewName}_attributes_literals = ${new Set(
-          Object.keys(quickView.attributes)
-        )
-          .map((attrName) => `"${attrName}"`)
-          .join(" | ")}${Object.keys(quickView.attributes).length === 0 ? "\"\"" : ""};\n`;
+        Object.keys(quickView.attributes)
+      )
+        .map((attrName) => `"${attrName}"`)
+        .join(" | ")}${
+        Object.keys(quickView.attributes).length === 0 ? '""' : ""
+      };\n`;
       outputTS += `
   interface ${quickViewName}_quickformcontrol extends Xrm.Controls.QuickFormControl {
     `;
       for (const [controlType, controlNames] of Object.entries(
         groupItemsByType(quickView.controls)
       )) {
-        outputTS += `getControl(controlName: "${controlNames.join("\" | \"")}"): ${controlType};\n`;
+        outputTS += `getControl(controlName: "${controlNames.join(
+          '" | "'
+        )}"): ${controlType};\n`;
       }
       outputTS += `
-    getControl(): ${quickViewName}_controls_types[]
-    getControl(controlNameOrIndex: string | number): ${quickViewName}_controls_types | null;
+    getControl(controlName: ${quickViewName}_controls_literals): ${quickViewName}_controls_types;
+    getControl(controlNameOrIndex: string | number): Xrm.Controls.Control | null;
+    getControl(delegateFunction?): ${quickViewName}_controls_types[]
     `;
-    for (const [attrType, attrNames] of Object.entries(
-      groupItemsByType(quickView.attributes)
-    )) {
-      outputTS += `getAttribute(attributeName: "${attrNames.join("\" | \"")}"): ${attrType};\n`;
-    }
+      for (const [attrType, attrNames] of Object.entries(
+        groupItemsByType(quickView.attributes)
+      )) {
+        outputTS += `getAttribute(attributeName: "${attrNames.join(
+          '" | "'
+        )}"): ${attrType};\n`;
+      }
       outputTS += `
-      getAttribute(attributeNameOrIndex: string | number): ${quickViewName}_attributes_types | null;
-    getAttribute(): ${quickViewName}_attributes_types[];
+      getAttribute(attributeName: ${quickViewName}_attributes_literals): ${quickViewName}_attributes_types;
+      getAttribute(attributeNameOrIndex: string | number): Xrm.Attributes.Attribute | null;
+    getAttribute(delegateFunction?): ${quickViewName}_attributes_types[];
   
   }`;
     }
     for (const [tabName, tab] of Object.entries(typeInfo.formTabs)) {
       outputTS += `
+      type ${tabName}_sections_literals = ${new Set(Object.keys(tab.sections))
+        .map((sectionName) => `"${sectionName}"`)
+        .join(" | ")}${Object.keys(tab.sections).length === 0 ? '""' : ""};\n`;
+      outputTS += `
 interface ${tabName}_sections extends Xrm.Collection.ItemCollection<Xrm.Controls.Section> {`;
-        outputTS += `get(itemName:"${Object.keys(tab.sections).join("\" | \"")}"): Xrm.Controls.Section;\n`;
-      
+      outputTS += `get(itemName: ${tabName}_sections_literals): Xrm.Controls.Section;\n`;
+      outputTS += `get(itemNameOrIndex: string | number): Xrm.Controls.Section | null;\n`;
+      outputTS += `get(delegate?): Xrm.Controls.Section[];\n`;
       outputTS += `}`;
 
       outputTS += `
@@ -516,26 +563,56 @@ interface ${tabName}_tab extends Xrm.Controls.Tab {
     }`;
     }
     outputTS += `
-interface ${currentFormName}_tabs extends Xrm.Collection.ItemCollection<${new Set(
+    type ${currentFormName}_tabs_types = ${new Set(
+      Object.keys(typeInfo.formTabs).map((tabType) => `${tabType}_tab`)
+    ).join(" | ")}${
+      Object.keys(typeInfo.formTabs).length === 0 ? "Xrm.Controls.Tab" : ""
+    };\n`;
+    outputTS += `
+    type ${currentFormName}_tabs_literals = ${new Set(
       Object.keys(typeInfo.formTabs)
     )
-      .map((tabName) => `${tabName}_tab`)
-      .join(" | ")}> {`;
+      .map((tabName) => `"${tabName}"`)
+      .join(" | ")}${
+      Object.keys(typeInfo.formTabs).length === 0 ? '""' : ""
+    };\n`;
+    outputTS += `
+interface ${currentFormName}_tabs extends Xrm.Collection.ItemCollection<${currentFormName}_tabs_types> {`;
     for (const [itemName, itemType] of Object.entries(typeInfo.formTabs)) {
       outputTS += `get(itemName:"${itemName}"): ${itemName}_tab;\n`;
     }
-    outputTS += `}`;
     outputTS += `
-interface ${currentFormName}_quickforms extends Xrm.Collection.ItemCollection<${new Set(
+    get(itemName: ${currentFormName}_tabs_literals): ${currentFormName}_tabs_types;
+    get(itemNameOrIndex: string | number): Xrm.Controls.Tab | null;
+    get(delegate?): ${currentFormName}_tabs_types[];
+    }`;
+    outputTS += `
+    type ${currentFormName}_quickforms_types = ${new Set(
       Object.keys(typeInfo.quickViews)
     )
       .map((quickViewName) => `${quickViewName}_quickformcontrol`)
-      .join(" | ")}${Object.keys(typeInfo.quickViews).length === 0 ? "Xrm.Controls.QuickFormControl" : ""}> {`;
+      .join(" | ")}${
+      Object.keys(typeInfo.quickViews).length === 0
+        ? "Xrm.Controls.QuickFormControl"
+        : ""
+    };\n`;
+    outputTS += `
+    type ${currentFormName}_quickforms_literals = ${new Set(
+      Object.keys(typeInfo.quickViews)
+    )
+      .map((quickViewName) => `"${quickViewName}"`)
+      .join(" | ")}${
+      Object.keys(typeInfo.quickViews).length === 0 ? '""' : ""
+    };\n`;
+    outputTS += `
+interface ${currentFormName}_quickforms extends Xrm.Collection.ItemCollection<${currentFormName}_quickform_types> {`;
     for (const [itemName, itemType] of Object.entries(typeInfo.quickViews)) {
       outputTS += `get(itemName:"${itemName}"): ${itemName}_quickformcontrol;\n`;
     }
     outputTS += `
+    get(itemName: ${currentFormName}_quickforms_literals): ${currentFormName}_quickforms_types;
     get(itemNameOrIndex: string | number): Xrm.Controls.QuickFormControl | null;
+    get(delegate?): ${currentFormName}_quickforms_types[];
     }`;
     outputTS += `
     type ${currentFormName}_attributes_types = ${new Set(
@@ -549,13 +626,13 @@ interface ${currentFormName}_quickforms extends Xrm.Collection.ItemCollection<${
     )
       .map((attrName) => `"${attrName}"`)
       .join(" | ")}\n`;
-      
+
     outputTS += `
     type ${currentFormName}_controls_types = ${new Set(
       Object.values(typeInfo.formControls)
     )
       .map((ctrlType) => `${ctrlType}`)
-      .join(" | ")}\n`
+      .join(" | ")}\n`;
     outputTS += `
     type ${currentFormName}_controls_literals = ${new Set(
       Object.keys(typeInfo.formControls)
@@ -573,22 +650,28 @@ interface ${currentFormName}_quickforms extends Xrm.Collection.ItemCollection<${
     interface ${currentFormName}_context extends Xrm.FormContext {
     ui: ${currentFormName}_ui;
   `;
-  for (const [controlType, controlNames] of Object.entries(
-    groupItemsByType(typeInfo.formControls)
-  )) {
-    outputTS += `getControl(controlName: "${controlNames.join("\" | \"")}"): ${controlType};\n`;
-  }
+    for (const [controlType, controlNames] of Object.entries(
+      groupItemsByType(typeInfo.formControls)
+    )) {
+      outputTS += `getControl(controlName: "${controlNames.join(
+        '" | "'
+      )}"): ${controlType};\n`;
+    }
     outputTS += `
-    getControl(controlNameOrIndex: string | number): ${currentFormName}_controls_types | null;
+    getControl(controlName: ${currentFormName}_controls_literals): ${currentFormName}_controls_types;
+    getControl(controlNameOrIndex: string | number): Xrm.Controls.Control | null;
     getControl(delegateFunction?): ${currentFormName}_controls_types[];
-    `
+    `;
     for (const [attrType, attrNames] of Object.entries(
       groupItemsByType(typeInfo.formAttributes)
     )) {
-      outputTS += `getAttribute(attributeName: "${attrNames.join("\" | \"")}"): ${attrType};\n`;
+      outputTS += `getAttribute(attributeName: "${attrNames.join(
+        '" | "'
+      )}"): ${attrType};\n`;
     }
     outputTS += `
-    getAttribute(attributeNameOrIndex: string | number): ${currentFormName}_attributes_types | null;
+    getAttribute(attributeName: ${currentFormName}_attributes_literals): ${currentFormName}_attributes_types;
+    getAttribute(attributeNameOrIndex: string | number): Xrm.Attributes.Attribute | null;
     getAttribute(delegateFunction?): ${currentFormName}_attributes_types[];
   }`;
     outputTS += `
