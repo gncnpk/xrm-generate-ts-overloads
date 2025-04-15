@@ -14,7 +14,7 @@ You can find the source code repository here: [xrm-generate-ts-overloads](https:
 2. Load any Dynamics 365 or Model-driven application form.
 3. Click on the blue Generate TypeScript Definitions button in the bottom right corner.
 4. Create a d.ts file in your project folder.
-5. Copy the generated TypeScript defintiions to your d.ts file.
+5. Copy and paste the generated TypeScript definitions to your d.ts file.
 
 **Definitions for subgrids/quick views/embedded forms are generated only if it has been loaded on the form.**
 
