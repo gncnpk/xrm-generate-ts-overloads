@@ -4,7 +4,7 @@ Automatically creates TypeScript type definitions compatible with [@types/xrm](h
 
 You can find the source code repository here: [xrm-generate-ts-overloads](https://github.com/gncnpk/xrm-generate-ts-overloads)
 
-## Prerequsites
+## Prerequisites
 
 * A userscript manager such as [Tampermonkey](https://www.tampermonkey.net/) (Chrome, Microsoft Edge, Safari, Opera Next, and Firefox) or [Greasemonkey](https://www.greasespot.net/) (Firefox)
 
